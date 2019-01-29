@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>title</title>
+	<!--link rel="stylesheet" href="style.css">
+	<script src="script.js"></script-->
+	<style>
+		canvas { border:1px solid red;}
+		path
+		{
+			stroke-width: 8;
+			stroke: #000;
+			stroke-linecap: round;
+			fill: none;
+		}
+	</style>
+</head>
+<body>
+<canvas id="canvas" width="600" height="400"></canvas>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+    <path id="cable" stroke="#666" fill="none" d="M5.5,1.75 A4.25,4.25 0 1 0 8,1.75" />
+</svg>
+
+<script>
+
+var FastVector  = function(x,y){
+	this.x = x;
+	this.y = y;
+};
+
+FastVector.prototype = {
+	
+	add: function (B,internal) {
+		var nx, ny;
+		if (typeof(B)=='number'){
+			nx = this.x+B;
+			ny = this.y+B;
+		}else{
+			nx = this.x+B.x;
+			ny = this.y+B.y;
+		}
+		return new FastVector(nx,ny);
+	},
+	dot: function(B) {
+		return ((this.x*B.x)+(this.y*B.y));
+	},
+	length: function() {
+		return Math.sqrt((this.x*this.x)+(this.y*this.y));
+	},
+	multiply: function(B) {
+		var nx, ny;
+		if (typeof(B)=='number'){
+			nx = this.x*B; ny = this.y*B;
+		}else{ 
+			nx = this.x*B.x; ny = this.y*B.y;
+		}
+		return new FastVector(nx,ny);
+	},
+	squaredLength: function(args) {
+		return (this.x*this.x)+(this.y*this.y);
+	},
+	sum: function(){
+		return this.x+this.y;
+	},
+	subtract: function(B) {
+		var nx, ny;
+		if (typeof(B) == 'number'){
+			nx = this.x-B; ny = this.y-B;
+		}else{
+			nx = this.x-B.x; ny = this.y-B.y;
+		}
+		return new FastVector(nx,ny);
+	},
+	toString: function() {
+		return "["+this.x+","+this.y+"]";
+	}
+
+};
+////////////////////////////////////// canvas.js
+
+(function(){
+
+var two_pi = Math.PI * 2;
+
+var Canvas = this.Canvas = function(canvas){
+	this.canvas = canvas;
+	this.ctx = this.canvas.getContext('2d');
+	this.ctx.fillStyle = this.ctx.strokeStyle = 'black';
+	
+	this.width = this.canvas.width;
+	this.height = this.canvas.height;
+};
+
+Canvas.prototype={
+	adjust: function(pos) {
+		var lx = this.canvas.offsetLeft,
+			ly = this.canvas.offsetTop,
+			px = pos.x,
+			py = pos.y;
+		
+		var inside = (px > lx && px < lx + this.width && py > ly && py < ly + this.height);
+		
+		return inside ? new FastVector((pos.x - lx) / this.canvas.width, (pos.y - ly) / this.canvas.height) : null;
+	},
+	
+	clear: function(){
+		this.ctx.clearRect(0, 0, this.width, this.height);
+	},
+	
+	circle: function(p, r){
+		x = p.x * this.width;
+		y = p.y * this.height;
+		this.ctx.beginPath();
+		this.ctx.moveTo(x + r, y);
+		this.ctx.arc(x, y, r, 0, two_pi, false);
+		this.ctx.fill();
+	},
+	
+	line: function(x1, x2){
+		this.ctx.beginPath();
+		this.ctx.moveTo(x1.x * this.width, x1.y * this.height);
+		this.ctx.lineTo(x2.x * this.width, x2.y * this.height);
+		this.ctx.stroke();
+	}
+};
+	
+})();
+////////////////////////////////////////////////////// point.js
+
+var Point = function(canvas, x, y){
+	this.canvas = canvas;
+	this.current = this.previous = new FastVector(x, y);
+	
+	this.mass = this.inv_mass = 1;
+	
+	this.force = new FastVector(0.0,0.05).multiply(0.3 * 0.3);
+	this.radius = 3;
+};
+
+Point.prototype = {
+	
+	setCurrent: function(p) {
+		this.current = p;
+	},
+	
+	setPrevious: function(p) {
+		this.previous = p;
+	},
+	
+	getCurrent: function() {
+		return this.current;
+	},
+	
+	getPrevious: function() {
+		return this.previous;
+	},
+	
+	move: function() {
+		if (this.inv_mass!=0){
+			var new_pos = this.current.multiply(1.99).subtract(this.previous.multiply(0.99)).add(this.force);
+			new_pos.x = (new_pos.x < 0) ? 0 : ((new_pos.x > 1) ? 1 : new_pos.x);
+			new_pos.y = (new_pos.y < 0) ? 0 : ((new_pos.y > 1) ? 1 : new_pos.y);
+			this.previous = this.current;
+			this.current = new_pos;
+		}
+	},
+	
+	draw: function() {
+		this.canvas.circle(this.current, this.radius);
+	}
+	
+};
+////////////////////////////////// constraint.js
+
+var Constraint = function(canvas, p1, p2, rl){
+	this.canvas = canvas;
+	this.p1 = p1;
+	this.p2 = p2;
+	this.rest_length = rl || p1.getCurrent().subtract(p2.getCurrent()).length();
+	this.squared_rest_length = this.rest_length * this.rest_length;
+};
+
+Constraint.prototype = {
+	draw: function(){
+		this.canvas.line(this.p1.getCurrent(), this.p2.getCurrent());
+	},
+	
+	satisfy: function(){
+		var p1 = this.p1.getCurrent();
+		var p2 = this.p2.getCurrent();
+		var delta = p2.subtract(p1);
+		
+		var p1_im = this.p1.inv_mass;
+		var p2_im = this.p2.inv_mass;
+		
+		var d = delta.squaredLength();
+		
+		var diff = (d - this.squared_rest_length) / ((this.squared_rest_length + d) * (p1_im + p2_im));
+		
+		if (p1_im != 0){
+			this.p1.setCurrent(p1.add(delta.multiply(p1_im * diff)));
+		}
+		
+		if (p2_im != 0){
+			this.p2.setCurrent( p2.subtract(delta.multiply(p2_im*diff)) );
+		}
+	}
+};
+
+////////////////////////////////// cloth.js
+
+document.addEventListener("DOMContentLoaded", function(){
+	var canvas = new Canvas(document.getElementById('canvas')),
+		cloth = new Cloth(canvas),
+		inputs = {}, point,
+		key_down, mouse_down, mouse;
+	
+	var position = function(event){
+		return canvas.adjust({
+			x: event.pageX,
+			y: event.pageY
+		});
+	};
+	
+	var setPoint = function(inv_mass){
+		if (!point) return;
+		if (mouse) {
+			point.setCurrent(mouse);
+			point.setPrevious(mouse);
+		}
+		point.inv_mass = inv_mass;
+	};
+
+	var ev = {
+		'keydown': function(event){
+			key_down = true;
+		},
+		
+		'keyup': function(){
+			key_down = false;
+		},
+		
+		'mousedown': function(event){
+			mouse_down = true;
+			mouse = position(event);
+			
+			if (!mouse) return;
+			
+			point = cloth.getClosestPoint(mouse);
+			setPoint(0);
+		},
+		
+		'mouseup': function(event){
+			mouse_down = false;
+			if (mouse) setPoint( key_down ? 0 : 1);
+		},
+		
+		'mousemove': function(event){
+			if (!mouse_down) return;
+			
+			mouse = position(event);
+			setPoint(mouse ? 0 : 1);
+		}
+	};
+	for (e in ev)
+		document.addEventListener(e, ev[e], false);
+/*
+	var dominp = document.getElementsByTagName('input');
+	Array.prototype.slice.call(dominp,0).forEach(function(input){
+		inputs[input.getProperty('id')] = input;
+	});
+	
+	inputs.points.addEventListener('click', cloth.togglePoints.bind(cloth), false);
+	inputs.constraints.addEventListener('click', cloth.toggleConstraints.bind(cloth),false);
+
+*/
+
+
+	
+	cloth.draw_points = true;//inputs.points.checked;
+	cloth.draw_constraints = true;//inputs.constraints.checked;
+	
+	setInterval(cloth.update.bind(cloth), 25);
+}, false);
+
+var Cloth = function(canvas){
+	
+	var max_points = 4,
+		width = canvas.width,
+		height = canvas.height,
+		max_dim = Math.max(width, height),
+		min_dim = Math.min(width, height),
+		x_offset = width * 0.2,
+		y_offset = height * 0.2,
+		spacing = (max_dim - (Math.max(x_offset, y_offset) * 2)) / max_points;
+	
+	this.num_iterations = 1;
+	this.canvas = canvas;
+	this.points = [];
+	this.constraints = [];
+	
+	var num_x_points = this.num_x_points = Math.round(max_points * (width / max_dim));
+	var num_y_points = this.num_y_points = 1;//Math.round(max_points * (height / max_dim));
+	
+	var constraint;
+	
+	var y = y_offset;
+	this.points[0] = [];
+	
+	for (var j = 0, x = x_offset; j < num_x_points; j++, x += spacing){
+		var point = new Point(canvas, x / width, y / height);
+		this.points[j] = point;
+					
+		//add a new horizontal constraints
+		if (j > 0){
+			constraint = new Constraint(canvas, this.points[j - 1], this.points[j]);
+			this.constraints.push(constraint);
+		}
+	}
+	//pin the top right and top left.
+	this.points[0].inv_mass = 0;
+	//this.points[0][Math.floor(num_x_points / 2)].inv_mass = 0;
+	this.points[num_x_points - 1].inv_mass = 0;
+
+	this.num_constraints = this.constraints.length;
+	
+	for (i = 0; i < this.num_constraints; i++)
+		this.constraints[i].draw();
+	
+};
+
+var cable = document.getElementById("cable");
+
+Cloth.prototype = {
+	
+	update: function() {
+		this.canvas.clear();
+		
+		var num_x = this.num_x_points,
+			num_y = this.num_y_points,
+			num_c = this.num_constraints,
+			num_i = this.num_iterations,
+			i, j;
+			
+		//move each point with a pull from gravity
+		for (j = 0; j < num_x; j++)
+			this.points[j].move();
+		
+		//make sure all the constraints are satisfied.
+		for (j = 0; j < num_i; j++)
+			for (i = 0; i < num_c; i++)
+				this.constraints[i].satisfy();
+		
+		//draw the necessary components.
+		if (0)//this.draw_constraints)
+			for (i = 0; i < this.num_constraints; i++)
+				this.constraints[i].draw();
+		
+		if (0)//this.draw_points)
+			for (j = 0; j < this.num_x_points; j++)
+				this.points[j].draw();
+		
+		var w = this.canvas.width;
+		var h = this.canvas.height;
+		// try a quadratic curve
+		var coords = [];
+		this.points.forEach( function (p,i) {
+			coords.push(p.current.x*w+","+(p.current.y*h));
+		});
+		// make path
+		var p = "M"+coords[0]+" C"+coords.slice(1).join(" ");
+		cable.setAttribute("d",p);
+		var w = this.canvas.width;
+		var h = this.canvas.height;
+		this.canvas.ctx.beginPath();
+		this.canvas.ctx.moveTo(this.points[0].current.x * w, this.points[0].current.y * h);
+		this.canvas.ctx.bezierCurveTo(this.points[1].current.x * w, this.points[1].current.y * h,
+			this.points[2].current.x * w, this.points[2].current.y * h,
+			this.points[3].current.x * w, this.points[3].current.y * h);
+		this.canvas.ctx.stroke();
+	},
+	
+	getClosestPoint: function(pos) {
+		var min_dist = 1,
+			min_point = null,
+			num_x = this.num_x_points,
+			num_y = this.num_y_points,
+			dist, i, j;
+		
+		for (j = 0; j < num_x; j++){
+			dist = pos.subtract(this.points[j].getCurrent()).length();
+			
+			if (dist < min_dist){
+				min_dist = dist;
+				min_point = this.points[j];
+			}
+		}
+		
+		return min_point;
+	},
+	
+	toggleConstraints: function(){
+		this.draw_constraints = !this.draw_constraints;
+	},
+	
+	togglePoints: function(){
+		this.draw_points = !this.draw_points;
+	}
+};
+
+
+</script>
+</body>
+</html>

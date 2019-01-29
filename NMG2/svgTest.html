@@ -1,0 +1,545 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>SVG MODULE TEST</title>
+	<script type="text/javascript" src="nmg2mods.js"></script>
+	<!--script type="text/javascript" src="modulejson.js"></script-->
+	<!--script type="text/javascript" src="moduleDic.js"></script-->
+</head>
+<body>
+    <style type="text/css">
+		body {
+			font-family:"segoe ui", sans-serif;
+		}
+		#options {
+			height:48px;
+			border:1px solid black;
+		}
+        svg {
+            overflow: visible;
+			-webkit-user-select:none;
+			-moz-user-select:none;
+			user-select:none;
+        }
+        body {
+            background-color: gray;
+			margin:0;
+        }
+		circle {
+			/*cursor: url(patch-cursor.png), auto;*/
+			cursor:pointer;
+		}
+		g.module {
+			width:256px;
+		}
+    </style>
+	<div id="options">
+		<label><input id="knob_shadow" type="checkbox" checked="checked" />Knob shadow</label>
+		<input id="scaler" type="range" min="-7.75" max="-1" step=".125" />
+		<input id="shifter" type="range" min="0" max="500" />
+	</div>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="600" viewBox="0 0 1024 600" font-family="sans-serif" font-size="9">
+        <defs id="alldefs">
+		<filter id="f3" x="-20%" y="-20%" width="200%" height="200%">
+			<feOffset result="offOut" in="SourceAlpha" dx="1" dy="1" />
+			<feGaussianBlur result="blurOut" in="offOut" stdDeviation="2" />
+			<feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+		</filter>
+		<filter id="f4" x="-10%" y="-10%" width="150%" height="150%">
+			<feOffset result="offOut" in="SourceAlpha" dx="0.5" dy="0.5" />
+			<feGaussianBlur result="blurOut" in="offOut" stdDeviation="1" />
+			<feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+		</filter>
+
+		<linearGradient id="g119" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop stop-color="rgba(190,190,190,0.35)" offset="0"/><stop stop-color="rgba(127,127,127,0.15)" offset="0.8"/><stop stop-color="rgba(64,64,64,0.5)" offset="1"/>
+            </linearGradient>
+            <radialGradient id="g120" gradientUnits="objectBoundingBox" cx="50%" cy="50%" r="70%">
+            <stop stop-color="#FFF" offset="0"/><stop stop-color="#FFF" offset="0.5"/><stop stop-color="#000" offset="1"/>
+            </radialGradient>
+            <linearGradient id="g121" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop stop-color="#333" offset="0"/><stop stop-color="#CCC" offset="0.5"/><stop stop-color="#222" offset="1"/>
+            </linearGradient>
+			<path id="BitmapHVCA" stroke="#222" fill="none" d="M0,6 L5,6 M21,6 L16,6 5,11.5 5,0 16,6" />
+			<path id="BitmapVVCA" stroke="#222" fill="none" d="M6,0 L6,5 M6,21 L6,16 11.5,5 0,5 6,16" />
+			<path id="BitmapWSAW" stroke="#222" fill="none" d="M0,9 L0,2 13,8.5" />
+			<path id="BitmapWSQR1" stroke="#222" fill="none" d="M0,5.5 L0,2 7,2 7,8.5 13,8.5 13,5.5" />
+			<path id="BitmapWSQR2" stroke="#222" fill="none" d="M2,5.5 L2,2 9,2 9,8.5 15,8.5 15,5.5" />
+			<path id="BitmapINV" stroke="#222" fill="none" d="M3,12 L13,7 3,2 3,12 M15.5,7 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+			<path id="BitmapSW12" stroke="#222" fill="none" d="M0,12 l8,0 a1.2,1.2 0 1,1 4,0 a2,2 0 1,1 -4,0 m2.5,-1.5 l3,-6 0,-4.5 M15,12 a1.2,1.2 0 1,1 4,0 a2,2 0 1,1 -4,0 m4,0 l4,0" />
+			<path id="BitmapSH" stroke="#222" fill="none" d="M0,12 l6,0 10,-6 M12,0 l0,7 M15,12 a1.2,1.2 0 1,1 4,0 a2,2 0 1,1 -4,0 m4,0 l4,0 m0,5 l10,0 0,-10 -10,0 z m2,-1.5 l0,-7 3,3 3,-3 0,7" />
+			<path id="BitmapLMOD" stroke="#222" fill="none" d="M0,24 l6,0 M21,24 l-5,0 -10,6 0,-12 10,6 M0,3 l6,0 m0,-2 l9,0 0,4 -9,0 0,-4 m9,2 l4,0 0,10 -8,0 0,8" />
+			<g id="levelShift0">
+				<rect width="12" height="12" stroke="#FFF" fill="none" />
+			</g>
+            <g id="check">
+                <path stroke="#666" d="M0,0 l10,0 0,10 -10,0 0,-10" />
+            </g>
+            <g id="onoff">
+                <path stroke="#666" d="m1,0 l11.5,0 0,11.5 -11.5,0 0,-11.5 M6.77,1.5 l0,4.5" />
+                <path stroke="#666" fill="none" d="M5.5,1.75 A4.25,4.25 0 1 0 8,1.75" />
+            </g>
+            <g id="input">
+                <circle r="5" cx="6" cy="5" stroke="#333" filter="url(#f4)" />
+                <circle r="3"  cx="6" cy="5" fill="black" />
+            </g>
+            <g id="output">
+                <path stroke="#333" d="m1,0 l10,0 0,10 -10,0 0,-10" filter="url(#f4)" />
+                <circle r="3"  cx="6" cy="5" fill="black" />
+            </g>
+            <g id="KnobSlider" stroke="#333">
+                <path stoke="#333" fill="#CCC" d="M0,0 l10,0 0,62 -10,0 0,-62 M0,46 l10,0 M0,54 l10,0" />
+                <path stoke="none" fill="#333" d="M2.5,51 l5,0 -2.5,-3 z M2.5,57 l5,0 -2.5,3 z" />
+            </g>
+            <g id="KnobSmall" stroke="#333">
+                <line x1="0.5" y1="17.5" x2="2.5" y2="15.5" />
+                <line x1="18.5" y1="17.5" x2="16.5" y2="15.5" />
+                <circle r="9" cx="9.5" cy="9.5" fill="url(#g120)" filter="url(#f3)" />
+            </g>
+            <g id="KnobMedium" stroke="#333">
+                <line x1="1" y1="19" x2="3" y2="17" />
+                <line x1="20" y1="19" x2="18" y2="17" />
+                <circle r="10" cx="10.5" cy="10.5" fill="url(#g120)" filter="url(#f3)" />
+            </g>
+            <g id="KnobReset" stroke="#333">
+				<path fill="green" stroke="black" d="m7,2 l6,0 -3,4 z" />
+                <line x1="1" y1="25" x2="3" y2="23" />
+                <line x1="20" y1="25" x2="18" y2="23" />
+                <circle r="10" cx="10.5" cy="16.5" fill="url(#g120)" filter="url(#f3)" />
+            </g>
+            <g id="KnobBig" stroke="#333">
+                <line x1="1" y1="21" x2="3" y2="19" />
+                <line x1="22" y1="21" x2="20" y2="19" />
+                <circle r="11" cx="11.5" cy="11.5" fill="url(#g120)" filter="url(#f3)" />
+            </g>
+        </defs>
+    </svg>
+	<pre id="pre" style="font-size:6pt"></pre>
+    <script type="text/javascript">
+        var xmlns="http://www.w3.org/2000/svg";
+		var type2colour = {Logic:"#f2f26d", Audio:"#f26d6d", Control:"#6d6df2"};
+		document.getElementById("knob_shadow").onclick = function (e) {
+			var f = e.target.checked?"url(#f3)":"none";
+			var c = document.querySelectorAll("g[id^=Knob] circle");
+			Array.prototype.slice.call(c,0).forEach( function (i) {
+				i.setAttributeNS(null,"filter",f);
+			});
+		}
+		document.getElementById("scaler").oninput = function (e) {
+			var p = document.getElementById("alldefs").parentElement;
+			var w = p.width.baseVal.value;
+			var h = p.height.baseVal.value;
+			var scale = Math.abs(e.target.value / 2);
+			var ovb = p.getAttribute("viewBox").split(" ");
+			var vb = ovb.slice(0,2).join(" ")+" "+Math.floor(w*scale)+" "+Math.floor(h*scale);
+			p.setAttribute("viewBox", vb);
+		}
+		document.getElementById("shifter").oninput = function (e) {
+			var p = document.getElementById("alldefs").parentElement;
+			var shift = e.target.value;
+			var ovb = p.getAttribute("viewBox").split(" ");
+			var vb = shift+" 0 "+ovb.slice(2).join(" ");
+			p.setAttribute("viewBox", vb);
+		}
+		function makeSubElements(s,sub)
+		{
+			sub.forEach( function (n) { // two passes (or pre-sort for correct render order
+				switch (n.type) {
+				case "Symbol":
+					var t = document.createElementNS(xmlns,"text");
+					var points = {x:n.XPos, y:6.5+n.YPos, fill:"#000"};
+					for (pp in points)
+						t.setAttributeNS(null,pp,points[pp]);
+					t.innerHTML = "&uarr;";
+					s.appendChild(t);
+					break;
+				case "Graph":
+					var t = document.createElementNS(xmlns,"rect");
+					var points = {x:n.XPos, y:n.YPos, width:n.Width, height:n.Height, fill:"#282"};
+					for (pp in points)
+						t.setAttributeNS(null,pp,points[pp]);
+					s.appendChild(t);
+					break;
+				case "Line":
+					var t = document.createElementNS(xmlns,"line");
+					t.setAttributeNS(null,"stroke","#333");
+					var points;
+					var x = parseInt(n.XPos)+1;
+					var y = parseInt(n.YPos);
+					var l = parseInt(n.Length);
+					var th = 0;
+					if (n.Width=="Thick")
+						th = 2;
+					if (n.Orientation.charAt(0)=="H")
+						points = {x1:x, y1:th+y, x2:x+(l*1), y2:th+y};
+					else
+						points = {x1:x, y1:y, x2:x, y2:y+(l*1)};
+					for (pp in points)
+						t.setAttributeNS(null,pp,points[pp]);
+					s.appendChild(t);
+					break;
+				default:
+					break;
+				}
+			});
+			sub.forEach( function (n) {
+				switch (n.type) {
+				case "TextField":
+					var t = document.createElementNS(xmlns,"rect");
+					var points = {x:n.XPos, y:n.YPos, width:n.Width, height:14, fill:"#666", "data-id":n.MasterRef, "data-f":n.f};
+					for (pp in points)
+						t.setAttribute(pp,points[pp]);
+					s.appendChild(t);
+					break;
+				case "Led":
+					var t = document.createElementNS(xmlns,"rect");
+					var p = {Sequencer:{w:10, h:6, c:"#060"},Green:{w:6.5, h:6.5, c:"#8F8"}}[n.Type];
+					for (pp in $$={fill:p.c, stroke:"#000", width:p.w, height:p.h, y:n.YPos, x:n.XPos})
+						t.setAttribute(pp,$$[pp]);	
+					s.appendChild(t);
+					break;
+				case "ButtonText":
+				case "ButtonFlat":
+					var t = document.createElementNS(xmlns,"svg");
+					var u = document.createElementNS(xmlns,"use");
+					var tx;
+					if (n.Width==13)
+						u.setAttributeNS("http://www.w3.org/1999/xlink","xlink:href","#onoff");
+					else {
+						u = document.createElementNS(xmlns,"rect");
+						if (n.Text) {
+							tx = document.createElementNS(xmlns,"text");
+							var tarray = n.Text.split(",");
+							tx.innerHTML = tarray[0];
+							for (pp in $$={fill:"#444", "font-size":8.5, y:7.75+n.YPos, x:2+n.XPos})
+								tx.setAttribute(pp,$$[pp]);	
+						}
+						for (pp in $$={height:10, width:n.Width-2, stroke:"#222"})
+							u.setAttribute(pp,$$[pp]);	
+					}
+					for (pp in $$={x:n.XPos, y:n.YPos, width:n.Width, fill:"#6df2f2"})
+						t.setAttributeNS(null,pp,$$[pp]);
+					t.appendChild(u);
+					s.appendChild(t);
+					if (tx)
+						s.appendChild(tx);
+					break;
+				case "Bitmap":
+					var t = document.createElementNS(xmlns,"svg");
+					var u = document.createElementNS(xmlns,"use");
+					var classn = n.type+n.ID;
+					t.setAttributeNS(null,"x",n.XPos);
+					t.setAttributeNS(null,"y",n.YPos);
+					u.setAttributeNS("http://www.w3.org/1999/xlink","xlink:href","#"+classn);
+					t.appendChild(u);
+					s.appendChild(t);
+					break;
+				case "Knob":
+					var t = document.createElementNS(xmlns,"svg");
+					var u = document.createElementNS(xmlns,"use");
+					var classn = n.type+n.Type;
+					t.setAttributeNS(null,"class",classn);
+					t.setAttributeNS(null,"x",n.XPos);
+					t.setAttributeNS(null,"y",n.YPos);
+					u.setAttributeNS("http://www.w3.org/1999/xlink","xlink:href","#"+classn);
+					t.appendChild(u);
+					s.appendChild(t);
+					break;
+				case "LevelShift":
+					var t = document.createElementNS(xmlns,"svg");
+					var u = document.createElementNS(xmlns,"use");
+					t.setAttributeNS(null,"class","levelshift");
+					t.setAttributeNS(null,"x",n.XPos);
+					t.setAttributeNS(null,"y",n.YPos);
+					u.setAttributeNS("http://www.w3.org/1999/xlink","xlink:href","#levelshift0");
+					t.appendChild(u);
+					s.appendChild(t);
+					break;
+				case "Input":
+				case "Output":
+					var t = document.createElementNS(xmlns,"svg");
+					var u = document.createElementNS(xmlns,"use");
+					var classn = (n.type=="Input")?"#input":"#output";
+					var colour = type2colour[n.Type];
+					t.setAttributeNS(null,"fill",colour);
+					t.setAttributeNS(null,"x",n.XPos);
+					t.setAttributeNS(null,"y",n.YPos);
+					u.setAttributeNS("http://www.w3.org/1999/xlink","xlink:href",classn);
+					t.appendChild(u);
+					s.appendChild(t);
+					break;
+				case "Text":
+					var t = document.createElementNS(xmlns,"text");
+					t.setAttributeNS(null,"fill","black");
+					t.setAttributeNS(null,"x",n.XPos-1);
+					t.setAttributeNS(null,"y",n.YPos+7);
+					t.innerHTML = n.Text;
+					s.appendChild(t);
+					break;
+				default:
+					break;
+				}
+			});
+		}
+		function makeBasicPanel(s,id,h,type)
+		{
+			s.setAttributeNS(null, "id", type);
+			var r1 = document.createElementNS(xmlns,"rect");
+			r1.setAttributeNS(null,"width","256");
+			r1.setAttributeNS(null,"height",h);
+			r1.setAttributeNS(null,"x","0");
+			r1.setAttributeNS(null,"y","0");
+			var r2 = document.createElementNS(xmlns,"rect");
+			r2.setAttributeNS(null,"width","256");
+			r2.setAttributeNS(null,"height",h);
+			r2.setAttributeNS(null,"x","0");
+			r2.setAttributeNS(null,"y","0");
+			r2.setAttributeNS(null,"fill","url(#g119)");
+			var p1 = document.createElementNS(xmlns,"path");
+			p1.setAttributeNS(null,"stroke","#333");
+			p1.setAttributeNS(null,"fill","none");
+			p1.setAttributeNS(null,"d","m0.5,0.5 0,"+h+" 255,0");
+			s.appendChild(r1);
+			s.appendChild(r2);
+			var p2 = document.createElementNS(xmlns,"path");
+			p2.setAttributeNS(null,"stroke","#FFF");
+			p2.setAttributeNS(null,"fill","none");
+			p2.setAttributeNS(null,"d","m1.5,0.5 l254,0 0,"+h);
+			s.appendChild(p2);
+			s.appendChild(p1);
+		}
+		function addModuleTemplate(id, xpos, ypos)
+		{
+			modcolours = ["#c0c0c0",
+				"#e5777a","#ba7d81","#ca8d8d","#ccbaba",
+				"#e7d14b","#dec77d","#ded1a5","#d0cbaa",
+				"#93d162","#82b980","#94cf9c","#baccba",
+				"#69d6c7","#7bc1bd","#a0d2c8","#bed2d2",
+				"#74a0d4","#808cc0","#8f9ac2","#b0bacc",
+				"#d673c7","#be82be","#cda0d2","#d2bed2"];
+			// get module description and build a template
+			var o = nmg2mods[id];
+			var defs = document.getElementById("alldefs");
+			
+			var h = o.height * 15;
+
+			// need to check if we have done this one already
+			var s = document.getElementById(o.type);
+			if (!s) {
+				s = document.createElementNS(xmlns,"svg");
+				makeBasicPanel(s,id,h,o.type);
+				makeSubElements(s,o.sub);
+				
+				defs.appendChild(s);
+			}
+			var g = document.createElementNS(xmlns,"g");
+			g.setAttributeNS(null,"class","module");
+			g.setAttribute("title", o.type);
+			var u = document.createElementNS(xmlns,"use");
+			u.setAttributeNS("http://www.w3.org/1999/xlink","xlink:href","#"+s.id);
+			u.setAttributeNS(null,"fill",modcolours[Math.floor(Math.random()*24)]);
+			g.setAttributeNS(null,"transform","translate("+xpos+","+ypos+")");
+			g.appendChild(u);
+			defs.parentElement.appendChild(g);
+			return h;
+		}
+        function mdown(e) {
+            // get control element for this control
+            var ss = e.target.previousSibling;
+			window.globScale = ss.ownerSVGElement.currentScale;
+            var control = ss.parentElement.controls.filter(function (c) { return c.sv === ss })[0];
+            window.globTarget = control;
+            control.mdx = e.screenX;
+            document.addEventListener("mousemove", mmove, false);
+            document.addEventListener("mouseup", mup, false);
+        }
+        function mmove(e) {
+            var deltax = (e.screenX - window.globTarget.mdx)/window.globScale;
+            var newx = window.globTarget.a + deltax;
+            newx = Math.max(-130, Math.min(130, newx));
+            window.globTarget.a = newx;
+            var dial = window.globTarget.sv;
+            var oldt = dial.getAttribute("transform");
+            var newt = oldt.replace(/rotate\([\d|\.|-]* /, "rotate(" + newx + " ");
+			if (newt != oldt)
+			{
+				dial.setAttribute("transform", newt);
+				if (globTarget.tw) {
+					var f = window[globTarget.f];
+					var i = Math.floor((newx+130)/2.047244094488189);
+					var t = " "+i;
+					if (f)
+						t = f(i);
+					globTarget.tw.innerHTML = t;
+				}
+			}
+        }
+        function mup(e) {
+            document.removeEventListener("mousemove", mmove, false);
+            document.removeEventListener("mouseup", mup, false);
+        }
+        function updateknob() {
+            var e = document.getElementById("test");
+            var k = globModules[0].controls[0];
+            k.a = e.value;
+            var oldt = k.sv.getAttribute("transform");
+            oldt = oldt.replace(/rotate\([\d|\.|-]* /, "rotate(" + k.a+" ");
+            k.sv.setAttribute("transform", oldt);
+        }
+        document.addEventListener("DOMContentLoaded", dom_ready);
+        function dom_ready() {
+			var mposx = 0;
+			var mposy = 0;
+			//[0x05,0x11,0x12,0x24,0x2f,0x32,0x35,0x39,0x3a,0x4c,0x55,0x5a,0x64,0x69,0x70,0x71,0x72,0x75,0x8b,0x8d,0x8e,0x8f,0xb4,0xba,0xbb,0xbc].forEach( function (e,i) {
+			[0xC0,0xA2,0xA3,0xA4,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,,0x70,0x71,0x72,0x75,0x8b,0x8d,0x8e,0x8f,0xb4,0xba,0xbb,0xbc,
+			0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x39,0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x92].forEach( function (e,i) {
+				mposy += addModuleTemplate(e, mposx, mposy)+1;
+				if (mposy>550)
+				{
+					mposx+=256;
+					mposy=0;
+				}
+			});
+            globModules = document.getElementsByTagName("g");
+            Array.prototype.slice.call(globModules, 0).forEach(function (e) {
+				if (e.className.baseVal!="module")
+					return;
+                var controls = [];
+                var tmpl8 = document.getElementById(e.firstChild.href.baseVal.slice(1));
+				var valwindow = tmpl8.querySelectorAll("rect[fill='#666']");
+                Array.prototype.slice.call(valwindow, 0).forEach(function (vw) {
+					var text = document.createElementNS(xmlns, "text");
+					for (pp in $$={"x":3+vw.x.baseVal.value, "y":9.5+vw.y.baseVal.value, "fill":"#FFF"})
+						text.setAttributeNS(null,pp,$$[pp]);
+					var id = vw.getAttribute("data-id");
+					var f = vw.getAttribute("data-f");
+					text.setAttributeNS(null,"data-id",id);
+					text.setAttributeNS(null,"data-f",f);
+					text.innerHTML = id;
+					e.appendChild(text);
+				});
+                // make element for each knob/control in template
+                var k = tmpl8.querySelectorAll("svg[class]");
+                Array.prototype.slice.call(k, 0).forEach(function (knob) {
+                    var n = knob.className.baseVal;
+                    if (n.charAt(0) == "_") {
+                    }
+                    else {
+                        var dial;
+                        var area;
+                        var x = knob.x.baseVal.value + knob.children[0].x.baseVal.value + 0.5;
+                        var y = knob.y.baseVal.value + knob.children[0].y.baseVal.value + 0.5;
+						var ktype = knob.className;////children[0].href.baseVal;
+						var kdic = {KnobBig:{r:11,cy:11},KnobMedium:{r:10,cy:10},KnobSlider:{r:0,cy:10},
+							KnobReset:{r:10,cy:16},KnobSmall:{r:9,cy:9},levelshift:{r:-1,cy:12}};
+						var r = kdic[ktype.baseVal];
+						/* for debug, tag controls
+						var tag = document.createElementNS(xmlns, "text");
+						for (pp in $$={"x":x,"y":y,fill:"red","font-size":7})
+							tag.setAttribute(pp, $$[pp]);
+						tag.innerHTML = controls.length;
+						*/
+						if (r.r>0) // has a radius?
+						{
+							area = document.createElementNS(xmlns, "circle");
+							dial = document.createElementNS(xmlns, "line");
+							area.setAttribute("r", r.r);
+							area.setAttribute("cx", x+r.r);
+							area.setAttribute("cy", y + r.cy);
+							area.setAttribute("fill", "rgba(44,0,0,0.01)");
+							dial.setAttribute("x1", x + r.r);
+							dial.setAttribute("y1", y+(r.cy-r.r));
+							dial.setAttribute("x2", x + r.r);
+							dial.setAttribute("y2", y + r.cy -3);
+							dial.setAttribute("stroke", "black");
+							var ang = Math.random() * 240 - 120;
+							dial.setAttribute("transform", "rotate(" + (ang) + " " + (x + r.r) + " " + (y + r.cy) + ")");
+						}
+						else // slider
+						{
+							area = document.createElementNS(xmlns, "rect");
+							dial = document.createElementNS(xmlns, "rect");
+							area.setAttribute("x", x);
+							area.setAttribute("y", y);
+							area.setAttribute("width", r.cy);
+							area.setAttribute("height", (r.r<0)?r.cy:62);
+							area.setAttribute("fill", "rgba(44,0,0,0.1)");
+							dial.setAttribute("x", x);
+							dial.setAttribute("y", y);
+							dial.setAttribute("width", r.cy-1);
+							dial.setAttribute("height", 6);
+							dial.setAttribute("fill", "url(#g121)");
+							dial.setAttribute("stroke", "none");
+							var pos = Math.random() * 40;
+							dial.setAttribute("transform", "translate(0," + (pos) + ")");
+						}
+						var sv;
+						if (r.r>=0) {
+							area.onmousedown = mdown;
+							sv = e.appendChild(dial);
+						}
+                        e.appendChild(area);
+						//e.appendChild(tag);
+                        controls.push({ sv: sv, a: ang, mdx:0 });
+                    }
+                });
+				// get all the value text objects and xref to controls
+                var tw = e.querySelectorAll("text[data-id]");
+                Array.prototype.slice.call(tw, 0).forEach(function (textwindow) {
+					try {
+						var id = parseInt(textwindow.getAttribute("data-id"));
+						var f =  textwindow.getAttribute("data-f");
+						controls[id].tw = textwindow;
+						controls[id].f = f;
+					} catch (e) {
+					}
+				});
+                e.controls = controls;
+            });
+			if (!Array.prototype.findIndex) {
+			  Array.prototype.findIndex = function(predicate) {
+				if (this == null) {
+				  throw new TypeError('Array.prototype.find called on null or undefined');
+				}
+				if (typeof predicate !== 'function') {
+				  throw new TypeError('predicate must be a function');
+				}
+				var list = Object(this);
+				var length = list.length >>> 0;
+				var thisArg = arguments[1];
+				var value;
+
+				for (var i = 0; i < length; i++) {
+				  value = list[i];
+				  if (predicate.call(thisArg, value, i, list)) {
+					return i;
+				  }
+				}
+				return -1;
+			  };
+			}		
+			/*
+			var pre = document.getElementById("pre");
+			var list = [];
+			for (var m in nmg2mods) {
+				var bma = nmg2mods[m].sub.filter( function (e) { return e.type=="Bitmap" && !e.ID["charAt"] });
+				if (bma.length) {
+					pre.appendChild( document.createTextNode("0x"+parseInt(m).toString(16)+":"+nmg2mods[m].type+"\t\t"+JSON.stringify(bma)+"\n"));
+					list.push("0x"+parseInt(m).toString(16));
+				}
+			}
+			pre.appendChild( document.createTextNode(list.join(",")+"\n"));
+			
+			for (var m in moduleDic) {
+				// find def in mods
+				var ix = mods.findIndex( function (e) { return(moduleDic[m].type==e.Name)});
+				if (ix>=0) {
+					moduleDic[m]["height"] = mods[ix].Height;
+					moduleDic[m]["sub"] = mods[ix].sub;
+				}
+				pre.appendChild( document.createTextNode("{0x"+parseInt(m).toString(16)+":"+JSON.stringify(moduleDic[m])+"},\n"));
+			}*/
+        }
+    </script>
+</body>
+</html>

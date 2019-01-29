@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>sharc</title>
+    <script src="script/_z.js"></script>
+    <script src="script/JSUnzip.js"></script>
+    <script src="script/rawinflate.js"></script>
+
+	<style>
+	html, body {
+		height:100%;
+	}
+    body {
+		font-family: "Open Sans", sans-serif;
+		box-sizing:border-box;
+		padding:0;
+		margin:0 0 0 -2px;
+		background: hsl(208, 16%, 68%);
+    }
+	h2 {
+		color: rgba(0,0,0,0.6);
+	}
+	h2 sup {
+		font-size:125%;
+		color: white;
+		text-transform: uppercase;
+		text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb, 0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0, 0, 0, 0.1), 0 0px 5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.3), 0 3px 5px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.2), 0 20px 20px rgba(0, 0, 0, 0.15);
+	}
+	#instrumentsDiv {
+		display:inline-block;
+		vertical-align:top;
+	}
+	.instrument {
+		display:inline-block;
+		padding:0;
+	}
+	.instrument h4 {
+		text-align:center;
+		color:white;
+		font-weight:200;
+		background-color:#00467c;
+		background-image: linear-gradient(rgba(40,40,40,0), rgba(40,40,40,0.75));
+		margin:0;
+		padding:9px 4px;
+		/*border:1px solid #333;*/
+		box-shadow: inset 1px 0 4px black;
+		height:1.2em;
+		min-width:146px;
+	}
+	.instrument ul {
+		display: none;
+	}
+	.instrument.opened h4 {
+		background-color: orange;
+	}
+	
+	div.keys {
+		position:relative;
+		height:300px;
+		width:80px;
+		display:inline-block;
+		background-color: #269;
+		margin-bottom:17px;
+		overflow: hidden;
+		background-image: 
+		repeating-linear-gradient(
+			rgba(0,0,0,0.25),
+			rgba(255,255,255,0.25) 1px,
+			rgba(255,255,255,0.25) 16px, rgba(0,0,0,0.25) 16px,
+			rgba(0,0,0,0.25) 32px, rgba(255,255,255,0.25) 32px,
+			rgba(255,255,255,0.25) 48px,rgba(0,0,0,0.25) 48px,
+			rgba(0,0,0,0.25) 64px, rgba(255,255,255,0.25) 64px,
+			rgba(255,255,255,0.25) 80px,rgba(0,0,0,0.25) 80px,
+			rgba(0,0,0,0.25) 96px, rgba(255,255,255,0.25) 96px,
+			rgba(255,255,255,0.25) 111px,  rgba(0,0,0,0.25) 111px,
+			rgba(0,0,0,0.25) 113px, rgba(255,255,255,0.25) 113px,
+			rgba(255,255,255,0.25) 128px,  rgba(0,0,0,0.25) 128px,
+			rgba(0,0,0,0.25) 144px, rgba(255,255,255,0.25) 144px,
+			rgba(255,255,255,0.25) 160px,rgba(0,0,0,0.25) 160px,
+			rgba(0,0,0,0.25) 176px,rgba(255,255,255,0.25) 176px,
+			rgba(255,255,255,0.25) 191px, rgba(0,0,0,0.25) 192px
+			);
+		background-position: 0 0;
+		background-size:100% 192px;
+		vertical-align:top;
+	}
+	div.keys h5 {
+		padding:0 2px 0 0;
+		margin:0;
+		font-weight:normal;
+		height:16px;
+		color: white;
+		text-align: right;
+		font-size:12px;
+		font-family:monospace;
+		position:relative;
+	}
+	div.keys h5.opened::before {
+		content:"\25b6";
+		position:absolute;
+		left:4px;
+		top:-1px;
+	}
+	#spectrum { 
+	/* spacing for log graph : 0,67,106,135,156,174,189,202,213,223
+	*/
+		display:inline-block;
+		height:220px;
+		width:669px;
+		margin-top:6px;
+		border-bottom:1em solid silver;
+		position:relative;
+		background-image: linear-gradient(
+			90deg,
+			#FFF, #FFF 2px, #888 2px, #888 67px,
+			#bbb 67px, #bbb 68px, #888 68px, #888 106px,
+			#bbb 106px, #bbb 107px, #888 107px, #888 135px,
+			#bbb 135px, #bbb 136px, #888 136px, #888 156px,
+			#bbb 156px, #bbb 157px, #888 157px, #888 174px,
+			#bbb 174px, #bbb 175px, #888 175px, #888 189px,
+			#bbb 189px, #bbb 190px, #888 190px, #888 202px,
+			#bbb 202px, #bbb 203px, #888 203px, #888 213px,
+			#bbb 213px, #bbb 214px, #888 214px, #888 223px
+		);
+		background-size:223px 223px;
+	}
+	#spectrum span {
+		display: inline-block;
+		position: absolute;
+		bottom:0;
+		width:1px;
+		border-left:2px solid black;
+	}
+	#spectrum span:first-child::before {
+		content:attr(data-f);
+		font-size:0.7em;
+		background-color:rgba(255,255,255,0.5);
+		padding:3px;
+		vertical-align:bottom;
+	}
+	#spectrum::before,#spectrum::after {
+		content:"100Hz";
+		position:absolute;
+		bottom:-1.25em;
+		left:223px;
+		font-size:0.7em;
+	}
+	#spectrum::after {
+		content:"1KHz";
+		left:446px;
+	}
+	#wcanvas {
+		border:1px solid silver;
+		box-shadow:1px 2px gray;
+		width:768px;
+		height:240px;
+	}
+	#readme {
+		position: relative;
+		margin-top:1.8em;
+		padding-top:1.8em;
+	}
+	#readme::before {
+		content:"Contents of Readme.txt from sharc.zip";
+		position: absolute;
+		display: block;
+		width: 100%;
+		height: 1em;
+		top: -1em;
+		left: -0px;
+		padding: 12px;
+		background-color: silver;
+	}
+	.rightp {
+		display:inline-block;
+		width: calc(100% - 90px);
+		border-left:6px solid silver;
+	}
+	</style>
+</head>
+<body>
+	<h2><sup>&nbsp;SHARC TIMBRE DATABASE</sup>
+	<small> - Gregory J. Sandell</small>
+	<audio id="playa" controls></audio>
+	<a id="downloadlink">wav link</a>
+	</h2>
+    
+	<script>
+	    document.title = document.location.pathname.split(['/']).slice(-1)[0].slice(0, -5);
+		document.body.appendChild(_z.dom("div.keys>h5*60++div.rightp>div#instrumentsDiv+div#spectrum+canvas#wcanvas++pre#readme"));
+		wcanvas.height = 386;
+		wcanvas.width = 768;
+		sampleRate = 24000;
+        // get the zip file that matches the html file name
+	    var xhr = new XMLHttpRequest();
+	    xhr.open("GET", document.title + ".zip");
+	    xhr.onload = function (e)
+	    {
+	        var data = new Uint8Array(xhr.response);
+	        var unzipper = new JSUnzip(data);
+	        if (unzipper.isZipFile)
+	        {
+	            unzipper.readEntries();
+	            var instruments = [];
+	            unzipper.entries.sort(function (a, b) { return (a.fileName == b.fileName)?0:(a.fileName>b.fileName)?1:-1});
+	            unzipper.entries.forEach(function (f,uzindex)
+	            {
+					var pe = f.fileName.split('/');
+	                if (f.compressionMethod==0)
+					{
+						pe.push(pe[1].replace(/_/g, " "));
+						instruments.push(_z.dom("div.instrument#"+pe[1]+">h4;3+ul", pe));
+						//console.log(pe.slice(-2)[0]);
+					}
+					else {
+						if (pe[1]==="README.txt")
+						{
+							readme.textContent = RawDeflate.inflate(f.data);
+							return;
+						}
+						
+	                    pe.push({ "data-uzindex": uzindex });
+	                    var r = _z.dom("li;2;3", pe);
+						if (pe[2]=="CONTENTS")
+							r.classList.add("contents");
+	                    instruments[instruments.length - 1].lastChild.appendChild(r);
+					}
+
+	            });
+	            instruments.forEach(function (m)
+	            {
+	                m.firstChild.onclick = clickInstrument;
+	                instrumentsDiv.appendChild(m); // Austro-Hungarian notation
+	            });
+	        }
+	        function clickInstrument(e)
+	        {
+				var oldel = document.querySelector(".instrument.opened");
+				var thisel = e.currentTarget.parentElement;
+				downloadlink.iname = thisel.id;
+				if (oldel && oldel != thisel)
+					oldel.classList.remove("opened");
+	            if (thisel.classList.toggle("opened"))
+					displayDetails(thisel);
+	        }
+			function clickNote(e)
+			{
+				var oldel = document.querySelector(".keys .opened");
+				var thisel = e.currentTarget;
+				downloadlink.inote = thisel.getAttribute("data-key");
+				if (oldel && oldel != thisel)
+					oldel.classList.remove("opened");
+	            if (thisel.classList.toggle("opened"))
+					displayNote(thisel);
+			}
+			function displayNote(e)
+			{
+				var frequency = e.getAttribute("data-frq");
+				var levelscale = 1000/e.getAttribute("data-max");
+				var key  = e.getAttribute("data-key")+".spect";
+				var notelist = document.querySelector(".instrument.opened ul");
+				if (notelist)
+				{
+					for (var i=0, n; n=notelist.children[i]; i++)
+						if (n.textContent.endsWith(key))
+							break;
+					if (n)
+					{
+						var uzi = n.getAttribute("data-uzindex");
+						var spec = unzipper.entries[uzi];
+						var inflatedData = spec.data;
+						if (spec.compressionMethod == 8)
+							inflatedData = RawDeflate.inflate(spec.data);
+						var rws = inflatedData.split("\n");
+						plotSpectrum(rws, frequency);
+						plotWave(rws, frequency, levelscale);
+						var url = URL.createObjectURL(makeWaveBlob(rws, frequency, levelscale));
+						playa.src = url;
+						downloadlink.href = url;
+						downloadlink.download = downloadlink.iname+downloadlink.inote+".wav";
+					}
+				}
+			}
+			/* plot harmonic spectrum for note
+				@data: array of text lines, dB phase
+				@frequency: fundamental
+			*/
+			function plotSpectrum(data, frequency)
+			{
+				spectrum.innerHTML = "";
+				var f;
+				data.forEach(function(d,i){
+					var dB = Number.parseFloat(d);
+					f = frequency*(i+1);
+					var s = spectrum.appendChild(_z.dom("span;0", [{"data-f":f}]));
+					s.style.left = ((Math.log10(f))-1)*223+"px";
+					s.style.height = 210 + (dB*3) +"px";
+				});
+			}
+			function mapSpect(x)
+			{
+				var a = x.trim().split(/\s+/);
+				return {dB:Math.pow(10,(Number.parseFloat(a[0])/20)),ph:Number.parseFloat(a[1])};
+			}
+			function plotWave(data, frequency, levelscale)
+			{
+				var c = document.getElementById("wcanvas");
+				var hlf = c.height>>1, thrd = c.height/9;
+				var ctx = c.getContext("2d");
+				var samps = Math.ceil(sampleRate/frequency);
+				var i, ip1,y, anginc = Math.PI*2/samps;
+				ctx.globalAlpha = 0.8;
+				ctx.fillStyle = "white";
+				ctx.fillRect(0, 0, c.width, c.height);
+				ctx.globalAlpha = 1;
+				ctx.beginPath();
+				
+				///var levs = data.slice(0,-1).map(dBstr=>Math.pow(10,(Number.parseFloat(dBstr)/20)));
+				var levs = data.slice(0,-1).map(mapSpect);
+				for (i=0;i<c.width;i++){
+					///y = levs.reduce((p,x,ix)=>p+(Math.sin((anginc*i)*(ix+1))*x.dB),0);
+					y = levs.reduce((p,x,ix)=>p+(Math.sin(((anginc*i)+x.ph)*(ix+1))*x.dB),0);
+					y *= levelscale;
+					if (i)
+						ctx.lineTo(i,hlf+y*thrd);
+					else
+						ctx.moveTo(i,hlf+y*thrd);
+				}
+				ctx.stroke();
+			}
+			function plotWaveLev(data, frequency, levelscale)
+			{
+				var c = document.getElementById("wcanvas");
+				var hlf = c.height>>1, thrd = c.height/9;
+				var ctx = c.getContext("2d");
+				var samps = Math.ceil(sampleRate/frequency);
+				var i, ip1,y, anginc = Math.PI*2/samps;
+				ctx.globalAlpha = 0.8;
+				ctx.fillStyle = "white";
+				ctx.fillRect(0, 0, c.width, c.height);
+				ctx.globalAlpha = 1;
+				ctx.beginPath();
+				
+				var levs = data;
+				for (i=0;i<c.width;i++){
+					y = levs.reduce((p,x,ix)=>p+(Math.sin(((anginc*i))*(ix+1))*x),0);
+					y *= levelscale;
+					if (i)
+						ctx.lineTo(i,hlf+y*thrd);
+					else
+						ctx.moveTo(i,hlf+y*thrd);
+				}
+				ctx.stroke();
+			}
+			function displayDetails(ob)
+			{
+				// contents file columns
+				//note,note#,len(fft),max,F,Factual,Vol,Trk,Idx,time,offset,centroid
+				var contents = ob.querySelector("li.contents");
+				var uzi = contents.getAttribute("data-uzindex");
+                var entry = unzipper.entries[uzi];
+				var a4 = null;
+                var topofs, ofsheight, highnotenum, curnotenum;
+				var divix=0, inflatedData = entry.data;
+                if (entry.compressionMethod == 8)
+                    inflatedData = RawDeflate.inflate(entry.data);
+				var rws = inflatedData.split("\n").slice(0,-1).reverse();
+				var notebuttonw = document.querySelector("div.keys");
+				Array.from(notebuttonw.children).forEach(function(x){
+					x.textContent="";
+					x.onclick=null;
+					x.className = "";
+				});
+				spectrum.innerHTML = "";
+				rws.forEach(function(r,i) {
+					r = r.trim().split(/\s+/);
+					if (i==0) {
+						highnotenum = r[1]>>0;
+						topofs = (12-((highnotenum+1)%12))*16;
+					} else {
+						curnotenum = r[1]>>0;
+						divix = highnotenum - curnotenum; // allow for gaps in the data
+					}
+					notebuttonw.children[divix].textContent = r[0]+"("+r[1]+")";
+					notebuttonw.children[divix].setAttribute("data-key", r[0]);
+					notebuttonw.children[divix].setAttribute("data-frq", r[5]);
+					notebuttonw.children[divix].setAttribute("data-max", r[3]);
+					if (r[0]==="a4")
+						a4 = divix;
+					notebuttonw.children[divix].onclick = clickNote;
+				});
+				notebuttonw.children[(a4===null)?divix:a4].click({currentTarget:notebuttonw.children[divix]});
+				ofsheight = (highnotenum - curnotenum) * 16 + 16;
+				notebuttonw.style.backgroundPosition = "0 -"+topofs+"px";
+				notebuttonw.style.height = ofsheight+"px";
+			}
+			function makeWaveBlob(data, frequency, levelscale)
+			{
+				// make a 16 bit mono wav blob
+				
+				var len = .5 * sampleRate; // half a second
+				var bytespersample = 2;
+				var blockalign = bytespersample;
+				var byterate = blockalign * sampleRate;
+				var buffer = new ArrayBuffer(44 + (len * bytespersample));
+				var view = new DataView(buffer);
+				var samps = Math.ceil(sampleRate/frequency);
+				var i, y, anginc = Math.PI*2/samps;
+
+				writeUTFBytes(view, 0, 'RIFF');
+				view.setUint32(4, 44 + len*bytespersample, true);
+				writeUTFBytes(view, 8, 'WAVE');
+				// FMT sub-chunk
+				writeUTFBytes(view, 12, 'fmt ');
+				view.setUint32(16, 16, true);
+				view.setUint16(20, 1, true);
+				// mono (1 channel)
+				view.setUint16(22, 1, true);
+				view.setUint32(24, sampleRate, true);
+				view.setUint32(28, byterate, true);// bytes rate, sample rate * channels*bytes per sample
+				view.setUint16(32, blockalign, true); //block align bytes per sample * channels
+				view.setUint16(34, bytespersample*8, true);// bits per sample
+				// data sub-chunk
+				writeUTFBytes(view, 36, 'data');
+				view.setUint32(40, len * bytespersample, true);
+
+				// write the PCM samples
+				var index = 44;
+				var volume = 1;
+				var y;
+				var levs = data.slice(0,-1).map(mapSpect);
+				for (var i = 0; i < len; i++) {
+					y = levs.reduce((p,x,ix)=>p+(Math.sin(((anginc*i)+x.ph)*(ix+1))*x.dB*levelscale),0)*-6500;
+					view.setInt16(index + (i<<1), y, true);
+				}
+
+				var blob = new Blob([view], { type: 'audio/wav' });
+				return blob;
+			}
+
+			function writeUTFBytes(view, offset, string)
+			{
+				var lng = string.length;
+				for (var i = 0; i < lng; i++)
+				{
+					view.setUint8(offset + i, string.charCodeAt(i));
+				}
+			}
+			//Array.from({length:25},(x,i)=>i+1).forEach((x,f)=>console.log(((2/f*Math.PI)*Math.sin(Math.PI*f*0.1)).toFixed(5)))
+			var pi = Math.PI, pw=0.5;
+			var pulsespec = Array.from({length:58},
+				function(x,i) {
+					var ix = i+1, lv = 2/(ix*pi)*(Math.sin(pi*ix*pw));
+					///var ix = i+1, lv = 2/ix*(Math.sin(pi*ix*pw)/(pi*ix));
+					//var ix = i+1, pw=0.5, lv = Math.sin(pi*ix*pw)/Math.sin(pi*ix);
+					var phase = " 0";//(lv<0)?" 3.14195":" 0";
+					return (Math.log10(Math.abs(lv))*20).toFixed(5)+phase;
+				})
+			//plotWaveLev(pulsespec, 55, 2);
+			//plotWave(Array.from({length:32}, (x,i)=>(Math.log10(1/((i+1)*2)*20).toFixed(5)+"  0"), 110, 0.5));
+			plotWave(pulsespec, 155, 2);
+			plotSpectrum(pulsespec, 155);
+		}		
+	    xhr.responseType = "arraybuffer";
+	    xhr.send();
+
+
+		document.onkeydown = function (e) {
+			var el, dur = "nextElementSibling";
+			switch(e.key)
+			{
+			case " ":
+				playa.play();
+				e.preventDefault();
+				break;
+			case "ArrowUp":
+			case "Up":
+				var dur = "previousElementSibling";
+			case "ArrowDown":
+			case "Down":
+				el = document.querySelector(".keys h5.opened");
+				while (el)
+				{
+					el = el[dur];
+					if (el.onclick)
+						break;
+				}
+				if (el)
+					el.click({currentTarget:el});
+				e.preventDefault();
+				break;
+			case "ArrowLeft":
+			case "Left":
+				var dur = "previousElementSibling";
+			case "ArrowRight":
+			case "Right":
+				el = document.querySelector(".instrument.opened");
+				el = el[dur];
+				if (el)
+					el.firstChild.click({currentTarget:el});
+				e.preventDefault();
+				break;
+			}
+		}
+		</script>
+</body>
+</html>

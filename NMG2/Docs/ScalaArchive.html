@@ -1,0 +1,141 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Searchable Scala Tuning Archive</title>
+    <link rel="stylesheet" href="../yomo2g2.css" type="text/css"/>
+    <script type="text/javascript" src="../zenDom.js"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+            var bgcolour = localStorage.getItem("colourPref");
+            if (bgcolour)
+                document.body.style.backgroundColor = bgcolour;
+        }
+        var xhr = new XMLHttpRequest();
+        var xml;
+        xhr.onload = function () {
+            xml = xhr.responseXML;
+            window.setTimeout(function () {
+                document.getElementById("horizontal_loader").style.display = 'none';
+            }, 800);
+        };
+        xhr.open("get", "scala.xml", true);
+        xhr.send();
+
+
+        function query() {
+            var text = document.getElementById("title_search").value;
+            var maxdisplay = 240;
+            var qry = [];
+            if (text.length)
+                qry.push("contains(@title,'" + text + "')");
+            var options = document.getElementById("count_lower_limit");
+            if (options.selectedIndex > 0)
+                qry.push("number(@count)>=" + options.options[options.selectedIndex].value);
+            var options = document.getElementById("count_upper_limit");
+            if (options.selectedIndex > 0)
+                qry.push("number(@count)<=" + options.options[options.selectedIndex].value);
+            path = "//scl";
+            if (qry.length)
+                path += "[" + qry.join(" and ") + "]";
+
+            var nodes = xml.evaluate(path, xml, null, XPathResult.ANY_TYPE, null);
+            var i = 0;
+            var result = nodes.iterateNext();
+            if (result) {
+                var table = ZenDom.parse(null, "table#rt>tr>th.buttonbg{try}+th.buttonbg{count}+th.buttonbg{description}");
+                while (result) {
+                    if (i > maxdisplay)
+                        break;
+                    var count = result.getAttribute('count');
+                    var title = htmlDecode(result.getAttribute('title'));
+                    var tr = ZenDom.parse(null, "tr>td+td{" + count + "}+td");
+                    tr.cells[2].innerHTML = title; // can't include in zendom because it has unknown punctuation
+                    tr.cells[0].title = result.childNodes[0].nodeValue;
+                    table.appendChild(tr);
+                    //document.write(result.getAttribute('title'));//.childNodes[0].nodeValue);
+                    result = nodes.iterateNext();
+                }
+                document.getElementById("results").innerHTML = table.outerHTML;
+                document.getElementById("rt").onclick = send2opener;
+            } else
+                document.getElementById("results").innerHTML = "<h2>No Results Found</h2>";
+        }
+        function send2opener(e) {
+            e.target.className = 'choice';
+            if (e.target.title.charAt(0) == "!")
+                window.opener.postMessage(e.target.title, window.location.origin);
+        }
+        function htmlDecode(input) {
+            var e = document.createElement('div');
+            e.innerHTML = input;
+            return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
+        }
+    </script>
+    <style type="text/css">
+        #rt {
+            border-collapse: collapse;
+        }
+            #rt td {
+                padding: 4px 0;
+            }
+            #rt td:nth-child(2) {
+                text-align:right;
+            }
+            #rt td:nth-child(3) {
+                padding-left:2em;
+            }
+            #rt tr:nth-child(2n+1) {
+                background-color: rgba(0,0,0,0.25);
+            }
+        #rt td:first-child
+        {
+        width: 26px;
+        height: 20px;
+    	font-family: 'icomoon';
+        }
+            #rt td:first-child::after {
+            	content: "\e600";
+            }
+            #rt td.choice::after {
+            	content: "\e603";
+            }
+
+    </style>
+</head>
+<body>
+    <div id="search_controls" style="position:relative;">
+        <div class="logo"></div>
+    </div>
+    <hr />
+    <div id="results"></div>
+    <script type="text/javascript">
+        // setup search controls
+        _zen_lower = ZenDom.parse(null, "select#count_lower_limit>option{no lower limit}+option*24");
+        Array.prototype.slice.call(_zen_lower).forEach(function (i, x) { i.value = (x)?x+1:0; if (x > 0) i.innerHTML = ">= " + (x + 1) });
+        _zen_upper = ZenDom.parse(null, "select#count_upper_limit>option{no upper limit}+option*24");
+        Array.prototype.slice.call(_zen_upper).forEach(function (i, x) { i.value = (x)?x+2:0; if (x > 0) i.innerHTML = "<= " + (x + 2) });
+        ZenDom.parse("search_controls", "span[style='position:absolute;top:0;left;120px']>span[style='display:inline-block;width:220px;text-align:right;margin-right:1em']{Filter by count:}+_zen_lower+_zen_upper");
+        ZenDom.parse("search_controls", "span>span{Search scala archive}[style='display:inline-block;width:220px;text-align:right;margin-right:1em']+input#title_search[placeholder='blank for any' autofocus='autofocus']");
+        var search_button = ZenDom.parse("search_controls", "button{Search}");
+        search_button.onclick = function () { query(); };
+        // see if we can ease the pain of cross browser css3 animations
+        // make a 'scanner' with abitrary number of led elements
+        var scanner = ZenDom.parse(0, "div#horizontal_loader{Loading xml file:}>div*8");
+        var ledArray = Array.prototype.slice.call(scanner.getElementsByTagName('div'));
+        var stylesel = [];
+        var numsec = 0.8;
+        var delayofs = numsec / ledArray.length;
+        var pcent = Math.floor(100 / ledArray.length * 2);
+        var l = { off: '#802020', on: '#FFEFEF' };
+        ZenDom.setKeyframes("loading", "0%{background-color:" + l.on + "}" + pcent + "%{background-color:" + l.off + "}100%{background-color:" + l.off + "}");
+        ledArray.forEach(function (led, i) {
+            var cls = '.led' + i;
+            led.className = cls.substr(1);
+            ZenDom.setCSS(cls + ';animation-delay: ' + i * delayofs + 's');
+            stylesel.push(cls);
+        });
+        ZenDom.setCSS(stylesel.join(',') + ";height:24px;width:10px;border-radius:2px;display:inline-block;background:" + l.off + ";margin:1px;animation:loading " + numsec + "s ease-in-out infinite");
+        ZenDom.setCSS("#horizontal_loader;display:inline-block;padding:1px 1px 1px 2px;border:1px solid silver;border-radius:4px;box-shadow:2px 2px 3px #000");
+    </script>
+</body>
+</html>

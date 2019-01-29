@@ -1,0 +1,379 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Unit Tests for mapZen.js</title>
+    <script type="text/javascript" src="shim.js"></script>
+    <script type="text/javascript" src="zenDom.js"></script>
+    <style type="text/css">
+        body {
+            font-family: 'Segoe UI';
+        }
+        .logo{
+            width: 100%;
+            height: 66px;
+            background-position:center center;
+            background-repeat: no-repeat;
+            background-image: url(data:image/png;base64,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);
+        }
+        #mytab2 {
+            display:inline-block;
+            border-collapse:collapse;
+        }
+            #mytab2 td table th {
+                width: 40px;
+                font-size: 10px;
+                border:none;
+                padding:2px;
+            }
+            #mytab2 td table td {
+                border: none;
+                padding:0;
+            }
+            #mytab2 td table td input[type='range'] {
+                height:12px;
+            }
+            #mytab2 td table {
+                border:none;
+            }
+            #mytab2 * {
+                padding: 4px;
+                border: 1px solid black;
+            }
+            #mytab2 th,#mytab2 td {
+                vertical-align: bottom;
+            }
+        #leftHandTopBox {
+            width: 300px;
+            padding:1em 8px;
+            margin-right:8px;
+            text-align:center;
+            display:inline-block;
+            background-color:#c11;
+            vertical-align:top;
+        }
+            #leftHandTopBox tr:nth-child(2n+1) {
+                background-color:silver;
+                border-radius:4px;
+            }
+            #leftHandTopBox td {
+                width:142px;
+                padding:4px;
+                text-align: left;
+                border-radius:4px 0 0 4px;
+            }
+            #leftHandTopBox td:last-child {
+                text-align: right;
+                border-radius:0 4px 4px 0;
+            }
+    </style>
+</head>
+<body>
+    <h2>The following dom elements are created dynamically on the client using MapZen.parse()</h2>
+
+    <script>
+        _zen_droplist1 = ZenDom.parse(null, "select.myselector>option*8");
+        "One,Two,Thee,Four,Five,Six,Seven,Eight".split(",").forEach(function (n, i) {
+            _zen_droplist1.children[i].innerHTML = n;
+            _zen_droplist1.children[i].value = i+1;
+        });
+        var outerzen = "td>table>tr>th{strongly disagree}+th{disagree}+th{unsure)+th{agree}+th{strongly agree}++tr>td[colspan='5']";
+        // check is this browser supports the range slider
+        var slider = ZenDom.parse(null, "input[type='range']");
+        if (slider.type != "text")
+            _zen_slider = ZenDom.parse(null, outerzen + ">input[type='range' min='0' max='250' value='0' style='width:90%']");
+        else
+            _zen_slider = ZenDom.parse(null, outerzen + ">input[type='radio' name='op' style='width:38px']*5");
+
+        ZenDom.parse(0, "div#leftHandTopBox>div.logo+h3{SUB HEADING}+p{\u00A9 FMHS 2014}+table#infoMid[cellspacing='0']>tr*5>td{ARRTIBUTE}+td{VALUE}", {});
+        var infoTable = ZenDom.parse(0, "".concat(
+            "table#mytab2[border='1']>",
+            "tr>th{Var}[rowspan='2']+th{File Name}[rowspan='2']+th{Details}[colspan='4']++",
+            "tr>th{Len}+th{Chan}+th{Size}+th{Rate}++tr*6>th+_zen_slider+td*3+td>_zen_droplist1")
+            );
+
+        // setup name values for opinion controls
+        var inputs = [].slice.call(infoTable.getElementsByTagName("input"));
+        var qs = "q1,q2,q3,q4,q5,q6".split(',');
+        if (inputs[0].type == 'radio') {
+            qs.forEach(function (e, i) {
+                for (var j = 0; j < 5; j++)
+                    inputs[i * 5 + j].name = e;
+            });
+        } else {
+            qs.forEach(function (e, i) {
+                inputs[i].name = e;
+            });
+        }
+
+        var sliders = [].slice.call(infoTable.querySelectorAll("input[type='range']"));
+        var inc = sliders[0].max / sliders.length;
+        sliders.forEach(function (slider, ix) {
+            slider.value = ix * inc;
+        });
+        finput = ZenDom.parse(0, "input[type='file']");
+
+        function proctext(e, filename) {
+            var text = e.target.result;
+            var lines = text.split(/[\r\n]+/g);
+            alert(lines[0]);
+        }
+        function _rom(data, filename) {
+            this.data = data;
+            this.filename = filename;
+            this.ismulaw = true; // assume companded
+            this.windowSize = 4096;
+            this.scale = data.byteLength / this.windowSize;
+
+            this.drawWave = function () {
+                var dataarray = new Uint8Array(this.data);
+                var canvas = document.getElementById("wave_canvas");
+                if (!canvas)
+                    canvas = ZenDom.parse(0, "div>canvas#wave_canvas[width='"
+                        + this.windowSize + "' height='512']" +
+                        "+button[onclick='Rom.decimate(2)']{Downsamplex2}+button[onclick='Rom.decimate(4)']{Downsamplex4}"
+                        ).firstChild;
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                var baseline = ctx.canvas.height / 4;
+                ctx.beginPath();
+                ctx.moveTo(0, baseline);
+                for (var x = 0; x < this.windowSize; x += this.scale) {
+                    var y = this.ulawExpand(dataarray[x * this.scale]) * 0.015625;//this.ulaw[dataarray[x * this.scale]];
+                    ctx.lineTo(x, baseline + y);
+                }
+                if (this.downSampledData) {
+                    baseline *= 3;
+                    ctx.moveTo(0, baseline);
+                    for (var x = 0; x < this.windowSize; x += this.scale) {
+                        var y = this.ulawExpand(this.downSampledData[x * this.scale]) * 0.015625;
+                        ctx.lineTo(x, baseline + y);
+                    }
+                }
+                ctx.stroke();
+            }
+            this.decimate = function (n) {
+                var gain = 1.0 / 1.960337404;
+                var dataarray = new Uint8Array(this.data);
+                var xcoeffs = [-0.1200421755, -0.0000000000, +0.6002108774, +1.0000000000, +0.6002108774, -0.0000000000, -0.1200421755];
+                var ncoeff = xcoeffs.length;
+                // get float version of data
+                var wfloat = [];
+                var dsmp = [];
+                for (var i = 0; i < dataarray.length; i++)
+                    wfloat.push(this.ulawExpand(dataarray[i]));
+                var wfloata = new Float64Array(wfloat);
+                // apply filter and discard all but nth
+                for (var i = 0; i < dataarray.length; i += n) {
+                    var tmp = wfloata.subarray(i, i + ncoeff);
+                    var sum = 0.0;
+                    for (var j = 0; j < ncoeff; j++) {
+                        sum += tmp[j] * xcoeffs[j];
+                    }
+                    dsmp.push(sum * gain);
+                }
+                // create alaw compressed version
+                this.downSampledData = new Uint8Array(dsmp.map(this.ulawCompress));
+                this.drawWave();
+                /*/ display downsampled wave below original
+                var canvas = document.getElementById("downsamp_wave_canvas");
+                if (!canvas)
+                    canvas = ZenDom.parse(0, "div>canvas#downsamp_wave_canvas[height='256']").firstChild;
+                canvas.width = this.windowSize / n;
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                var baseline = ctx.canvas.height / 2;
+                ctx.beginPath();
+                ctx.moveTo(0, baseline);
+                for (var x = 0; x < this.windowSize/n; x += this.scale) {
+                    ctx.lineTo(x, baseline + dsmp[x]);
+                }
+                ctx.stroke();*/
+            }
+            function wav2mulaw(wbuf) {
+                var ubuf = [];
+                // get scale factor to normalise to full scale
+                var absmax = 0;
+                for (var i = 0; wbuf.length; i++)
+                    absmax = Math.max(absmax, Math.abs(wbuf[i]));
+                var scalefac = Math.pow(2, 15) / absmax;
+                // convert to mulaw
+                for (var i = 0; wbuf.length; i++) {
+                    var num = Math.floor(wbuf[i] * scalefac);
+                    // get 1's compliment of 14bit value, 33 is difference value
+                    var absnum = num < 0 ? ((~num) >> 2) + 33 : (num >> 2) + 33;
+                    if (absnum > 0x1FFF)
+                        absnum = 0x1FFF;
+                    // get segment
+                    var ix = absnum >> 6;
+                    var segno = 1;
+                    while (ix) {
+                        segno += 1;
+                        ix >>= 1;
+                    }
+                    var high_nib = 8 - segno;
+                    var low_nib = (absnum >> segno) & 0x0F;
+                    low_nib = 15 - low_nib;
+                    ubuf.push((high_nib<<4)|low_nib);
+                }
+                return ubuf;
+            }
+            this.ulawExpand = function (b8) {
+                //return this.ulaw[comp];
+                var exp = ((b8 & 0x70) >> 4) + 1;
+                var man = (b8 & 0x0F)|0x10;
+                var b14 = (man << exp);
+                if (b8 > 127)
+                    b14 = 0 - b14;
+                return b14;
+            }
+            this.ulawCompress = function (b14) {
+                var leadingZerosTable = [
+                    7, 6, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3,
+                    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ];
+                var abs = Math.floor(Math.min(8193, Math.abs(b14)));
+                var lz = leadingZerosTable[((abs & 0x1FC0) >> 6)];
+                var man = ((abs>>(8-lz)) & 0xF);
+                var b8 = ((b14 < 0) ? 0x80 : 0) | ((7-lz) << 4) | man;
+                return b8;
+            }
+
+            return this;
+        }
+        function procbin(e) {
+            Rom = new _rom(e.target.result, e.target.originalName);
+            Rom.drawWave();
+        }
+        function _wav(data, filename) {
+            this.data = data;
+            this.filename = filename;
+            var dataview = new DataView(this.data);
+            var hdr = dataview.getInt32(0);
+            if (hdr == 0x52494646/*RIFF*/)
+                this.bigEndian = true;
+            else if (hdr == 0x52494658/*RIFX*/)
+                this.bigEndian = false;
+            else {
+                alert("Not RIF[F|X]");
+                return null;
+            }
+            // walk the chunks (I always wanted to say that)
+            var chunksize, ofs = 8;
+            do {
+                hdr = dataview.getInt32(ofs);
+                chunksize = dataview.getInt32(ofs + 4, this.bigEndian)+8;
+                if (hdr == 0x57415645 /*WAVE*/) {
+                    hdr = dataview.getInt32(ofs + 4);
+                    if (hdr == 0x666d7420/*fmt */) {
+                        chunksize = dataview.getInt32(ofs + 8, this.bigEndian)+12;
+                        this.audioFormat = dataview.getInt16(ofs + 12, this.bigEndian);
+                        this.channels = dataview.getInt16(ofs + 14, this.bigEndian);
+                        this.sampleRate = dataview.getInt32(ofs + 16, this.bigEndian);
+                        this.bitDepth = dataview.getInt16(ofs + 26, this.bigEndian);
+                    }
+                }
+                else if (hdr == 0x64617461 /*data*/) {
+                    this.dataOffset = ofs + 8;
+                    break;
+                }
+                ofs += chunksize;
+            } while (ofs < this.data.byteLength);
+            if (!this.dataOffset)
+                return warning('Error reading header, no data offset found');
+            return this;
+        }
+        function warning(msg) {
+            alert(msg);
+            return null;
+        }
+        function procwav(e) {
+            var rowarray = Array.prototype.slice.call(infoTable.rows);
+            var row = (rowarray.filter(function (i) { return i.cells[0].innerHTML == ""; }))[0];
+            if (!row)
+                return warning("Table is all full!");
+            Wav = new _wav(e.target.result, e.target.originalName);
+            row.cells[0].innerHTML = "1";
+            row.cells[1].innerHTML = Wav.filename;
+            row.cells[2].innerHTML = Wav.audioFormat;
+            row.cells[3].innerHTML = Wav.channels;
+            row.cells[4].innerHTML = Wav.bitDepth;
+            row.cells[5].innerHTML = Wav.sampleRate;
+        }
+        var ftypes = {
+            txt: { proc: proctext, readas: 'readAsText' },
+            bin: { proc: procbin, readas: 'readAsArrayBuffer' },
+            wav: { proc: procwav, readas: 'readAsArrayBuffer' }
+        };
+        finput.onchange = function () {
+            if (this.files[0]) {
+                // get extension
+                var fnm = this.files[0].name;
+                var ext = fnm.split('.').pop();
+                ext = (ext == fnm) ? null : ext.toLowerCase();
+                if (ext in ftypes) {
+                    var reader = new FileReader();
+                    reader.originalName = fnm;
+                    reader.onload = ftypes[ext].proc;//(e);
+                    reader[ftypes[ext].readas](this.files[0]);
+                } else
+                    alert("I don't know how to process " + ext);
+            }
+        }
+    </script>
+    <hr />
+    <style>
+        #scrollWrapper {
+            width: 1536px;
+            height:288px;
+            overflow-x:scroll;
+            overflow-y:hidden;
+        }
+        #scrollInner {
+            width: 12288px;
+        }
+            #scrollInner div.bar {
+                width: 383px;
+                height: 24px;
+                background-color:gray;
+                border-right:1px solid;
+                display: inline-block;
+            }
+    </style>
+    <script>
+        /*
+        var ss = ZenDom.parse(0, "div#scrollWrapper>div#scrollInner>div.bar*32+canvas#background[height='960' width='12288']", {});
+        var bars = ss.querySelectorAll(".bar");
+        for (var i = 0; i < bars.length; i++)
+            bars[i].innerHTML = "B" + (i + 1);
+        var canv = ss.querySelector("#background");
+        // draw a sample grid on the canvas
+        var ctx = canv.getContext('2d');
+        ctx.fillStyle = "#DDD";
+        ctx.fillRect(0, 0, canv.width, canv.height);
+        ctx.strokeStyle = "#FFF";
+        for (var i = 0; i < canv.width; i += 8) {
+            ctx.strokeStyle = "#FFF";
+            ctx.lineWidth = 1;
+            if (i % 96 == 0)
+                ctx.strokeStyle = "#000";
+            else if (i % 24 == 0)
+                ctx.strokeStyle = "#655";
+            if (i % 384 == 0)
+                ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, canv.height);
+            ctx.stroke();
+        }
+        */
+    </script>
+</body>
+</html>

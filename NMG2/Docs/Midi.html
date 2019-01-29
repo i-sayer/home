@@ -1,0 +1,22 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+<body>
+<div class="multicol">
+    <h2>MIDI files</h2>
+    <p>This utility supports Standard midi type 1 and 2 files, type 1 needs more work in that all notes are allocated to a single track. These should be split into pseudo tracks based on midi channel.</p>
+    <p>The system shows basic track summary in a table and a colour coded piano roll preview. You can hover over any note to get it's note name,number and velocity.</p>
+    <p>A change time option list allows you to compress or expand the notes into more or less time. Use lower to allow more notes at the expense of timing accuracy.</p>
+    <p>Midi notes are portioned into blocks of time that represent the number of sequencer steps per variation in the patch. The system writes gate information into a buffer based on note start and end times.
+        Note allocation logic ensures that consecutive notes for the same note number and slot use the same buffer/note send module. The process is repeated for each variation with notes that overflow from one
+        variation to the next being locked. All non overflowing note/slot combinations are free to be reallocated.
+    </p>
+    <p>The gate buffer array is then translated into level and gate settings in the sequencer modules. Each note send row is allocated a binary weight based on its postion and the output of all seqlev modules is converted into individual gates by a atod module.</p>
+    <hr />
+    <h2>Templates so far</h2>
+    <p>The maximum I can fit into a single pch2 is 10 bars per variation. Two templates are provided, one with velocity and one without. The latter uses the velocity channels to provide extra note sends (48 up from 32), but all velocity is set to 100.</p>
+    <p>Ten bars per variation is not a good fit for 4:4 based music so another template is offered which reduces the number of sequencers in each chain from 10 to 8. This means you are able to repeat sections multiple times.</p>
+</div>
+</body>
+</html>

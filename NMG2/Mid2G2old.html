@@ -1,0 +1,512 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Midi - PCH2</title>
+    <script type="text/javascript" src="moduleDic.js"></script>
+    <script type="text/javascript" src="NordPch2.js"></script>
+    <script type="text/javascript" src="zenDom.js"></script>
+    <!--link href='http://fonts.googleapis.com/css?family=Audiowide' rel='stylesheet' type='text/css'-->
+    <script type="text/javascript" src="moduleDic.js"></script>
+    <link rel="stylesheet" href="g2utility.css" type="text/css"/>
+</head>
+<body>
+<script>
+    ZenDom.parse(document.body, "div#leftHandTopBox>div.logo{G2}+h1{MIDI-PCH2}+table#infoMid[cellspacing='0']>tr*5>td*2", {});
+    ZenDom.parse(document.body, "div#intro>p{This is a tool for converting note information from a midi file, to settings in a Nord Modular G2 patch file}"+
+        ">ol>li{Choose Midi File}+li[style='color:black']{Choose PCH2}+li[style='color:black']>a#download[href='#' download='f.pch2']{Save download link}"+
+        "+++input#file_select[type='file' onchange='getdata(this)']+p{\u00A9 Ian Sayer 2014}", {});
+</script>
+    <!--
+    <div id="intro">
+        <p>This is a tool for converting note information from a midi file, to settings in a Nord Modular G2 patch file.</p>
+        <ol>
+            <li>Choose Midi File</li>
+            <li style="color:black">Choose PCH2</li>
+            <li style="color:black"><a id="download" href="#" download="converted.pch2" >Save download link.</a></li>
+        </ol>
+        <input id="file_select" type="file" onchange="getdata(this)" />
+    </div>
+    -->
+        <script>
+            var tt = ZenDom.parse(document.body/*getElementById('intro')*/, "".concat(
+                "table#trackInfo[style='display:none']>",
+                "tr>th{Trk}[rowspan='2']+th{Name}[rowspan='2' colspan='2']+th{Notes}[colspan='3']+th[rowspan='2']{Add}++",
+                "tr>th{Tot}+th{B1-32}+th{Unq}++tr>th+td*5+td>input[type='checkbox']"),
+                {});
+
+        </script>
+    <p></p>
+        <style>
+        #scrollWrapper {
+            width: 1536px;
+            overflow-x:scroll;
+            overflow-y:hidden;
+        }
+        #scrollInner {
+            width: 12290px;
+            position:relative;
+        }
+            #scrollInner div {
+                position:absolute;
+                height: 6px;
+                box-shadow:black 1px 1px 2px;
+            }
+            #scrollInner span.bar {
+                display: inline-block;
+                width: 378px;
+                height: 16px;
+                padding-left:4px;
+                background-color:gray;
+                color:black;
+                font-size:12px;
+                border-left:1px solid;
+                border-right:1px solid;
+            }
+    </style>
+    <script>
+        var ss = ZenDom.parse(document.body, "div#scrollWrapper>div#scrollInner>span.bar*32+canvas#notegridbackground[height='192' width='12288']", {});
+        var bars = ss.querySelectorAll(".bar");
+        for (var i = 0; i < bars.length; i++)
+            bars[i].innerHTML = "B" + (i + 1);
+        function fillGrid(topnote) {
+            var canv = ss.querySelector("#notegridbackground");
+            // draw a sample grid on the canvas
+            var ctx = canv.getContext('2d');
+            var keycolours = ["#999", "#777", "#999", "#777", "#999", "#999", "#777", "#999", "#777", "#999", "#777", "#999"];
+            for (var i = 0; i < canv.height; i += 8) {
+                var cx = (Math.floor(i / 8) + topnote + 2) % 12;
+                ctx.fillStyle = keycolours[cx];
+                ctx.fillRect(0, i, canv.width, i + 8);
+            }
+            ctx.strokeStyle = "#FFF";
+            for (var i = 0; i < canv.width; i += 24) {
+                ctx.strokeStyle = "#FFF";
+                ctx.lineWidth = 0.5;
+                if (i % 96 == 0)
+                    ctx.strokeStyle = "#000";
+                else if (i % 24 == 0)
+                    ctx.strokeStyle = "#655";
+                if (i % 384 == 0)
+                    ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canv.height);
+                ctx.stroke();
+            }
+        }
+        fillGrid(0);
+    </script>
+
+    <script>
+
+    function getdata(obj) {
+        var file = obj.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var arraybuffer = reader.result;
+                if (file.name.slice(-4) == ".mid")
+                    setupMidi(mid = new Mid(arraybuffer, file.name));
+                else if (file.name.slice(-5) == ".pch2")
+                    mid2pch2(a = new pch2_(arraybuffer, file.name));
+                else
+                    alert("Can't grok file type from extension, looking for .mid or .pch2");
+            }
+            reader.readAsArrayBuffer(file);
+        }
+    }
+    
+    function mid2pch2(pch2, _ppq) {
+        // manipulate levels in pch2 sequencers and make a new pch2 file
+        if (window['mid'] == undefined)
+            return;
+        this.param = {
+            sixteenthsPerVar:4*16,
+            ppq:mid.ppq,
+            pps:mid.ppq/4,
+            notesends:25
+        };
+        var fileInfo = document.getElementById("infoMid").rows;
+        fileInfo[3].cells[0].innerHTML = "&nbsp;";
+        fileInfo[4].cells[0].innerHTML = "PCH2 File";
+        fileInfo[4].cells[1].innerHTML = pch2.filename;
+        var ns = pch2.getModuleArray(1, "NoteSend");
+        param.notesends = ns.length;
+        // for each variation: we need a list of unique note events and a boolian if the note gate on intersects with each of the 16th notes.
+        function sequnit(startbar, param) {
+            this.startbar = startbar;
+            this.starttime = startbar * param.ppq * 4;
+            this.endtime = this.starttime + param.sixteenthsPerVar * param.ppq / 4;
+            this.clearArray = new Int8Array(param.sixteenthsPerVar);
+            function row(param) {
+                this.notenum = 0;
+                this.free = true; // boolean, can be reassigned notenum as last 16th vel == 0
+                this.col = new Int8Array(param.sixteenthsPerVar); // store velocity for each 16th note segment, 0 = no gate
+            }
+            this.rows = [];
+            for (var i=0; i<param.notesends; i++ )
+                this.rows.push(new row(param));
+            this.nextVar = function () {
+                // setup for next variation block
+                this.startbar++;
+                this.starttime = this.startbar * param.ppq * param.sixteenthsPerVar / 4;
+                this.endtime = this.starttime + param.sixteenthsPerVar * param.ppq / 4;
+                for (var i = 0; i < this.rows.length; i++) {
+                    // check if gate was on for last step
+                    var lastwason = this.rows[i].col[param.sixteenthsPerVar] > 0;
+                    this.rows[i].col.set(this.clearArray); // reset all the values
+                    if (!lastwason) {
+                        this.rows[i].free = true;
+                        this.rows[i].notenum = 0;
+                    }
+                }
+            }
+            this.takeNote = function(n, param) {
+                var i,j;
+                if (n.start >= this.endtime)
+                    return false; // wont happen in this block of time so give up
+                if ((n.start+n.length) < this.starttime)
+                    return true; // all over before this block but keep requesting
+                var stsx = Math.max(0, Math.floor((n.start - this.starttime)/param.pps));
+                var ensx = Math.min(param.sixteenthsPerVar-1, Math.floor((n.start - this.starttime + n.length)/param.pps));
+                // find matching or available row
+                for (i=0; i<param.notesends; i++)
+                    if (this.rows[i].notenum == n.notenum)
+                        break;
+                if (i==param.notesends)
+                    // no match, check for a free row for this variation
+                    for (i=0; i<param.notesends; i++)
+                        if (this.rows[i].free) {
+                            this.rows[i].free = false;
+                            this.rows[i].notenum = n.notenum;
+                            break;
+                        }
+                if (i<param.notesends) // we have a row so go
+                    for (j=stsx; j<ensx; j++)
+                        this.rows[i].col[j] = n.vel;
+                return true;
+            }
+        }
+        var sa = pch2.getModuleArray(1, "rowa");
+        var sb = pch2.getModuleArray(1, "rowb");
+        var sc = pch2.getModuleArray(1, "rowc");
+        var sd = pch2.getModuleArray(1, "rowd");
+        var sv = pch2.getModuleArray(1, "rowv");
+        var su = new sequnit(0, this.param);
+        var varmul = sa[0].pcnt;
+        var ttabchks = document.getElementById('trackInfo').getElementsByTagName('input');
+        for (var variation=0; variation<8; variation++)
+        {
+            if (variation>0)
+                su.nextVar();
+            for (var t = 0; t < ttabchks.length; t++)
+                if (ttabchks[t].checked)
+                    for (var i = 0; su.takeNote(mid.tracks[t].notes[i], this.param) ; i++)
+                        ;
+            // set note numbers starting from top row
+            var notesendmul = ns[0].pcnt;
+            var bw = new Uint32Array(param.sixteenthsPerVar);
+            var avgvel = new Uint8Array(param.sixteenthsPerVar);
+            // need another array to accumulate avg velocity
+            for (var i = 0; i < ns.length; i++) {
+                ns[i].lv[1+variation*notesendmul] = su.rows[i].notenum;
+                // for each column in row, accumulate a binary weight if vel > 0
+                var bitw = Math.pow(2, i);
+                for (j = 0; j < param.sixteenthsPerVar; j++)
+                    if (su.rows[i].col[j] > 0)
+                        bw[j] |= bitw;
+            }
+            for (var i = 0; i < param.sixteenthsPerVar; i++) {
+                // count notes and accumulate velocity average for each step
+                var velacc = 0;
+                var velcnt = 0;
+                for (j = 0; j < ns.length; j++) {
+                    if (! su.rows[j].free)
+                        if (su.rows[j].col[i] > 0) {
+                            velcnt++;
+                            velacc += su.rows[j].col[i];
+                        }
+                }
+                avgvel[i] = Math.floor(velacc / velcnt);
+            }
+
+            // now we have all the binary coded columns, time to set the sequencer levels
+            for (j = 0; j < param.sixteenthsPerVar; j++) {
+                var seqmod = Math.floor(j / 16);
+                var levidx = (j % 16)+(variation*varmul);
+                // seqa gets bits 0-7 for level and bit 8 for gate
+                sa[seqmod].lv[levidx] = bw[j] & 0x7F;
+                sa[seqmod].lv[16 + levidx] = (bw[j] & 0x80) ? 1 : 0;
+                // seqb gets bits 9-15 for level and bit 16 for gate
+                sb[seqmod].lv[levidx] = ((bw[j] & 0x7F00) >> 8);
+                sb[seqmod].lv[16 + levidx] = (bw[j] & 0x8000) ? 1 : 0;
+                // seqc gets bits 17-23 for level and bit 16 for gate
+                sc[seqmod].lv[levidx] = ((bw[j] & 0x7F0000) >> 16);
+                sc[seqmod].lv[16 + levidx] = (bw[j] & 0x800000) ? 1 : 0;
+                // seqd gets bits 25-32 for level gate unused
+                sd[seqmod].lv[levidx] = ((bw[j] & 0xFE000000) >> 25);
+                // seqv is for velocity but gate goes to 24th note
+                sv[seqmod].lv[levidx] = avgvel[j];
+                sv[seqmod].lv[16 + levidx] = (bw[j] & 0x1000000) ? 1 : 0;
+            }
+        }
+        // now we need to rewrite the controls chunk and recalc crc
+        pch2.writeParameters(1);
+        var url = pch2.getUrl();
+        var lnk = document.getElementById("download");
+        lnk.href = url;
+        lnk.download = mid.filename.substr(0, mid.filename.length - 3) + "pch2";
+        var stepli = document.getElementById("intro").getElementsByTagName('li');
+        stepli[0].style.color = stepli[1].style.color = "black";
+        stepli[2].firstChild.style.color = "white";
+        stepli[2].style.zIndex = 5;
+    }
+
+    function setupMidi(midi) {
+        // setup preview page for this midi file
+        var trackTable = document.getElementById("trackInfo");
+        var grid = document.getElementById("scrollInner");
+        var gridwidth = grid.offsetWidth;
+        var ttg = (gridwidth/96) * midi.ppq;
+        var fileInfo = document.getElementById("infoMid").rows;
+        fileInfo[0].cells[0].innerHTML = "Midi File";
+        fileInfo[0].cells[1].innerHTML = midi.filename;
+        fileInfo[1].cells[0].innerHTML = "Format";
+        fileInfo[1].cells[1].innerHTML = midi.format;
+        fileInfo[2].cells[0].innerHTML = "PPQ";
+        fileInfo[2].cells[1].innerHTML = midi.ppq;
+        //document.getElementById("file_select").style.display = 'none';
+        var stepli = document.getElementById("intro").getElementsByTagName('li');
+        stepli[0].style.color = stepli[2].style.color = "black";
+        stepli[1].style.color = "white";
+        trackTable.style.display = "inline-block";
+        var row = trackTable.rows[2];
+        var cells = row.cells;
+        var topnote = 0;
+        var trkn = 1;
+        var botnote = 127;
+        for (var i = 0; i < midi.numtracks; i++) {
+            cells[0].innerHTML = i + 1;
+            cells[2].innerHTML = midi.tracks[i].trackName;
+            cells[3].innerHTML = midi.tracks[i].notes.length;
+            var chk = cells[6].firstChild;
+            chk.checked = false;
+            chk.style.display = "none";
+            if (midi.tracks[i].notes.length) {
+                cells[1].className = "track" + trkn++;
+                var st = midi.tracks[i].getNoteStatistics(0, ttg);
+                if (st.hi > topnote)
+                    topnote = st.hi;
+                if (st.lo < botnote)
+                    botnote = st.lo;
+                cells[4].innerHTML = st.count;
+                cells[5].innerHTML = st.uniqueCount;
+                chk.checked = true;
+                chk.style.display = "inline";
+                drawNotes(midi, st, i);
+            }
+            if (i < midi.numtracks - 1) {
+                var newrow = row.cloneNode(true);
+                //trackTable.getElementsByTagName('tbody')[0].appendChild(newrow);
+                trackTable.appendChild(newrow);
+                cells = newrow.cells;
+            }
+        }
+        // shift notes into view
+        var grid = document.getElementById("scrollInner");
+        var notedivs = grid.getElementsByTagName('div');
+        var newtopAdjust = ((125 - topnote) * 8);
+        for (var i = 0; i < notedivs.length; i++) {
+            var nt = (parseInt(notedivs[i].style.top) - newtopAdjust) + "px";
+            notedivs[i].style.top = nt;
+        }
+        //grid.style.marginTop = ((125 - topnote) * -8) + "px";
+        document.getElementById("notegridbackground").height = (topnote - botnote + 4) * 8;
+        // redraw backgound
+        fillGrid(topnote);
+    }
+    
+    function getNoteName(n, nn) {
+        var oct = Math.floor(n.notenum/12)-1;
+        return nn[n.notenum%12]+oct+"("+n.notenum+")V"+n.vel ;
+    }
+    function drawNotes(midi, st, tracknum) {
+        if (st.count == 0)
+            return;
+        var f = midi.ppq / 96;
+        var grid = document.getElementById("scrollInner");
+        // create absolute positioned div for each note
+        for (var i = st.firsti; i <= st.lasti; i++) {
+            nd = document.createElement("div");
+            n = midi.tracks[tracknum].notes[i];
+            // calculate top offset, left offset and width
+            nd.style.top = ((127 - n.notenum) * 8 + 21) + "px";
+            nd.style.left = ((Math.floor(n.start / f))) + "px";
+            nd.style.width = ((Math.floor(n.length / f))) + "px";
+            nd.className = "track" + tracknum;
+            nd.title = getNoteName(n, midi.notenames);
+            grid.appendChild(nd);
+        }
+    }
+    function Mid(data, filename) {
+        this.data = data;
+        this.fileview = new DataView(data);
+        this.fp = 0;
+        this.filename = filename;
+        this.tempo;
+        this.ppq;
+        this.numtracks = 0;
+        this.notenames = ["C", "C\u266f", "D", "D\u266f", "E", "F", "F\u266f", "G", "G\u266f", "A", "A\u266f", "B"];
+        function track(data) {
+            this.trackName = "unnamed";
+            this.notes = [];
+            var dataview = data;
+            var hdr = dataview.getInt32(0) ;
+            if (hdr != 0x4d54726b) {
+                alert("Bad Track Header")
+                return;
+            }
+            function flagNoteCh(dv, ch, notenum) {
+                // calc offset into bitbuffer, test bit value then set bit
+                var bix = (ch & 0xF) * (128 / 8) + Math.floor(notenum / 8);
+                var bib = (0x80>>(notenum % 8));
+                var bval = dv[bix] & bib;
+                dv[bix] |= bib;
+                return (bval) ? false : true;
+            }
+            this.getNoteStatistics = function (start, end) {
+                if (start == undefined)
+                    start = 0;
+                if (end == undefined)
+                    end = this.currTime;
+                // get zero'd block of memory to check for uniqueness 
+                var bba = new Uint8Array(16 * 128 / 8); // 16 channels, 128 notes, 1 bit per flag
+                var stats = Object.create({ lo: 127, hi: 0, count: 0, firsti:-1, lasti:0, uniqueCount:0 });
+                for (var i = 0; i < this.notes.length; i++) {
+                    var n = this.notes[i];
+                    if (n.start+n.length > end) {
+                        stats.lasti = i - 1;
+                        break;
+                    }
+                    if (n.start < start)
+                        continue;
+                    stats.count++;
+                    if (flagNoteCh(bba, n.stat, n.notenum))
+                        stats.uniqueCount++;
+                    if (stats.firsti == -1)
+                        stats.firsti = i;
+                    if (n.notenum > stats.hi)
+                        stats.hi = n.notenum;
+                    if (n.notenum < stats.lo)
+                        stats.lo = n.notenum;
+                    // add code for unique notes in range
+                    // set end time
+                }
+                return stats;
+            }
+            this.currTime = 0; // reset realtime, updated in readDeltaTime()
+            this.fp = 4;
+            this.tracksize = dataview.getInt32(this.fp) ;
+            this.fp += 4;
+            var max4track = this.fp + this.tracksize;
+            var runningStatus = 0, databyte, auxbyte;
+            do {
+                var delta = readDeltaTime(data, this);
+                var eventCode = dataview.getUint8(this.fp++) ;
+                if (eventCode==0xFF) {
+                    // META
+                    var subCode = dataview.getUint8(this.fp++) ;
+                    var len = dataview.getUint8(this.fp++) ;
+                    if (subCode == 0x2f)
+                        break;
+                    if (subCode == 0x03) {
+                        var txt = "";
+                        for (var i = 0; i < len; i++)
+                            txt += String.fromCharCode(dataview.getUint8(this.fp+i));
+                        this.trackName = txt;
+                    }
+                    this.fp += len;
+                } else {
+                    // midi event, check status bit
+                    if (eventCode & 0x80) {
+                        runningStatus = eventCode;
+                        databyte = dataview.getUint8(this.fp++) ;
+                    } else
+                        databyte = eventCode;
+                    var runch = String.fromCharCode(runningStatus & 0xF0);
+                    if ( runch != '\xC0' && runch != '\xd0')
+                        auxbyte = dataview.getUint8(this.fp++) ;
+                    if ( runch == '\x80') {
+                        runch = '\x90';
+                        runningStatus = 0x90 | (runningStatus & 0xF);
+                        auxbyte = 0; // fake alt note off for real note off
+                    }
+                    if (runch == '\x90') {
+                        var n = procNoteEvent(this.currTime, runningStatus, databyte, auxbyte, this.notes);
+                        if (n)
+                            this.notes.push(n);
+                    }
+                }
+            } while (this.fp < max4track);
+            function note(time, stat, notenum, vel) {
+                this.stat = stat;
+                this.notenum = notenum;
+                this.vel = vel;
+                this.start = time;
+                this.length = -1;
+            }
+            function procNoteEvent(time, stat, notenum, vel, n) {
+                var rv = null;
+                if (vel==0) {
+                    rv = null;// find matching note on and calc note length
+                    for (var i = n.length-1;i>=0;i--) {
+                        if (n[i].stat == stat && n[i].notenum == notenum) {
+                            if (n[i].length < 0)
+                                n[i].length = time - n[i].start ;
+                            // else note on allready has a note off, wrong but we dont care
+                            break;
+                        }
+                    }
+                } else {
+                    rv = new note(time, stat, notenum, vel);
+                }
+                return rv;
+            }
+            function readDeltaTime(dv, that) {
+                // as per spec, delta time is n * 8bit values where bit 0-6 are time, msb is flag (0=end of delta time)
+                var ch = dv.getInt8(that.fp++);
+                var rv = ch & 0x7f;
+                while (ch & 0x80) {
+                    rv *= 128;
+                    ch = dv.getInt8(that.fp++);
+                    rv += (ch & 0x7f);
+                }
+                that.currTime += rv;
+                return rv;
+            }
+        }
+        this.tracks = [];
+        var hdr = new Uint8Array(data, this.fp, 4);
+        if ("MThd" != String.fromCharCode.apply(null, hdr)) {
+            alert("bad header");
+            return;
+        }
+        var header_size = this.fileview.getInt32(4, false);
+        this.format = this.fileview.getInt16(8, false);
+        this.numtracks = this.fileview.getInt16(10, false);
+        this.ppq = new DataView(data).getInt16(12, false);
+        this.fp = 14 + (header_size - 6); // adjust in case header is > 6 bytes
+        for (i = 0; i < this.numtracks; i++) {
+            this.tracks.push(new track(new DataView(this.data, this.fp)));
+            this.fp += this.tracks[this.tracks.length - 1].tracksize + 8;
+        }
+    }
+    //var teststr = "abc123456def".split("");
+    //teststr = teststr.map(function (s) { return s.toString().charCodeAt(0); });
+    //mycrc = calcCrc(teststr);
+    //alert(mycrc.toString(16));
+    //alert(moduleDic[145].type);
+    </script>
+</body>
+</html>
+

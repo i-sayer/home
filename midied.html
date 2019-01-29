@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>widge test</title>
+
+    <script src="script/_z_.js"></script>
+    <script src="MIDIfile.js"></script>
+    <style>
+		html, body { height:100vh;}
+        :root {
+            --keywidth: 24px;
+            --kw: rgba(255,255,255,0.25);
+            --kb: rgba(0,0,0,0.25);
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+			background: url(_images/hex.png), linear-gradient(90deg, #444,#CCC);
+            margin:0;
+        }
+        h2 {
+            border-top: 3px solid rgba(255,255,255,0.75);
+			background: rgba(0,0,0,0.5);
+			padding:1em;
+			margin:0;
+			color:white;
+        }
+		.widg { box-shadow: 2px 2px 6px black}
+        .topBar {
+            background-color: black;
+            height: 24px;
+        }
+        div.white, div.black {
+            height:8px;
+            border:1px solid silver;
+            width: var(--keywidth);
+        }
+        div.white {
+            background-color: white;
+        }
+        div.black {
+            background-color: black;
+        }
+        div.keys {
+            background-position-x: var(--keywidth);
+            background-color: #269;
+            background-image: repeating-linear-gradient( var(--kw) 10px, var(--kb) 10px, var(--kb) 20px, var(--kw) 20px,
+                var(--kw) 30px, var(--kb) 30px, var(--kb) 40px, var(--kw) 40px,
+                var(--kw) 50px, var(--kb) 50px, var(--kb) 60px, var(--kw) 60px,
+                var(--kw) 80px, var(--kb) 80px, var(--kb) 90px, var(--kw) 90px,
+                var(--kw) 100px, var(--kb) 100px, var(--kb) 110px, var(--kw) 110px,
+                var(--kw)),
+                linear-gradient(90deg, white 2px, transparent 2px),
+                linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px);
+            background-size:100% 120px, 120px 100%, 30px 100%;
+        }
+        h2 {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        #menu {
+            color: white;
+            font-weight: 400;
+            font-size: 2rem;
+        }
+        label[for=filedrop] {
+            background-color: orange;
+            border: 1px solid gray;
+            border-radius: 8px;
+            position: relative;
+        }
+        label[for=filedrop]::before {
+            content: "Select a .mid file";
+            position: absolute;
+            top: 6px;
+            left: 43px;
+            text-shadow: 1px 1px 3px black;
+            }
+        #stats {
+            column-width: 240px;
+            column-gap: 2px;
+        }
+        #stats>table {
+            background-color: rgba(255,255,255,0.8);
+            width: 100%;
+            border-collapse: collapse;
+        }
+        tr[class] {
+            break-inside: avoid;
+        }
+        .pb {
+            text-align: center;
+            font-weight: bold;
+            padding: 3px;
+            box-shadow: -1px -1px inset rgba(0,0,0,0.5),1px 1px inset rgba(255,255,255,0.75);
+        }
+    </style>
+</head>
+<body>
+    <h2>
+        <span>MID VIEWER</span>
+        <label id="menu">&#119133; &#119134; &#9833; &#9834;</label>
+        <label  for="filedrop">
+            <input id="filedrop" type="file" style="opacity:0" />
+        </label>
+    </h2>
+    <div id="stats"></div>
+    <div id="main"></div>
+
+</body>
+<script>
+    var editbox = _z.dom("div.widg>div.topBar");
+    var keys = _z.dom("div.keys>div.key*96");
+    var pattern = [1,0,1,0,1,0,1,1,0,1,0,1];
+    var keyclass = ["black","white"];
+    Array.from(keys.childNodes).forEach((k, i)=>k.classList.add(keyclass[pattern[i%12]]));
+    editbox.appendChild(keys);
+    main.appendChild(editbox);
+    var midifile;
+    filedrop.onchange = function (e){
+        var tmpFileReader = new FileReader();
+        tmpFileReader.onload = function (u){
+            midifile = new mid_(tmpFileReader.result, filedrop.files[0].name);
+            start();
+        }
+        tmpFileReader.readAsArrayBuffer(filedrop.files[0]);
+    };
+    function start()
+    {
+        // make set of hues for tracks based on number of tracks
+        let huecnt = midifile.tracks.length;
+        const hu = (new Uint16Array(huecnt)).map((i,j)=>(j*(360/huecnt)));
+        let jsoncss = {};
+        hu.forEach((h,i)=>jsoncss[".h"+i]={"background-color":`hsla(${h},80%,${60+((i&3)*6)}%,0.8)`});
+        _z.json2css(jsoncss);
+        let statsobj = {
+            "File Name": midifile.filename,
+            "Time Signature": midifile.timesig,
+            "Tracks": midifile.tracks.length,
+            "PPQ": midifile.ppq
+        };
+        let tbod = stats.appendChild(_z.dom("table>tbody"));
+        for (x of Object.keys(statsobj))
+            tbod.appendChild(_z.dom("tr>td;0+td;1", [x, statsobj[x]]));
+        if (midifile.tempo.length == 0)
+            midifile.tempo.push({bpm:5000000,time:0});
+        midifile.tempo.forEach(t=>
+            tbod.appendChild(_z.dom("tr>td;0+td;1", [(60000000/t.bpm).toFixed(0)+"BPM", t.time]))
+        );
+        tbod = stats.appendChild(_z.dom("table>tbody"));
+        midifile.tracks.forEach((u,i)=>
+            tbod.appendChild(_z.dom(`tr.h${i}>td>div.pb^${i+1}++td;trackName`, u))
+        );
+    }
+</script>
+</html>

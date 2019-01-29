@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Searchable Drum Rom Archive</title>
+    <link rel="stylesheet" href="../yomo2g2.css" type="text/css"/>
+    <script type="text/javascript" src="../zenDom.js"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+            var bgcolour = localStorage.getItem("colourPref");
+            if (bgcolour)
+                document.body.style.backgroundColor = bgcolour;
+        }
+        var romdict = {};
+        var xhr = new XMLHttpRequest();
+        var xml;
+        xhr.onload = function () {
+            xml = xhr.responseXML;
+            window.setTimeout(function () {
+                document.getElementById("horizontal_loader").style.display = 'none';
+                query();
+            }, 800);
+        };
+        xhr.open("get", "drum-roms.xml", true);
+        xhr.send();
+
+
+        function expando(obj) {
+            var ius = obj.getElementsByTagName('ul')[0];
+            if (parseInt(ius.style.height)) {
+                ius.style.height = "0";
+                obj.className = "machine";
+            } else {
+                ius.style.height = ius.scrollHeight + "px";
+                obj.className = "machine open";
+            }
+        }
+        function dispatcher(e) {
+            if (e.target.className.indexOf("machine")>=0)
+                expando(e.target);
+            else if (e.target.className.indexOf("rom")>=0)
+                send2opener(e);
+        }
+        function query() {
+            var nodes = xml.evaluate("//machine", xml, null, XPathResult.ANY_TYPE, null);
+            var i = 0;
+            var result = nodes.iterateNext();
+            if (result) {
+                var ul = ZenDom.parse(null, "ul#machine");
+                while (result) {
+                    var machine_name = result.getAttribute('name');
+                    var compression = result.getAttribute('compress');
+                    var li = ZenDom.parse(ul, "li.machine{" + machine_name + "}");
+                    var roms = result.getElementsByTagName('rom');
+                    if (roms.length) {
+                        var innerul = ZenDom.parse(li, "ul#roms");
+                        Array.prototype.slice.call(roms).forEach(function (rom) {
+                            var rom_li = ZenDom.parse(innerul,
+                                "li.rom[title='rom" + i + "' data-compress='" + compression + "']{" + rom.getAttribute('name') + "}");
+                            romdict["rom" + i] = rom.innerHTML;
+                            i++;
+                        });
+                    }
+                    result = nodes.iterateNext();
+                }
+                document.getElementById("results").innerHTML = ul.outerHTML;
+                document.getElementById("machine").onclick = dispatcher;
+                ZenDom.setCSS("#roms;transition:height 0.2s ease-in-out");
+            } else
+                document.getElementById("results").innerHTML = "<h2>No Results Found</h2>";
+        }
+        function send2opener(e) {
+            //alert(e.target.innerHTML);
+            e.target.className = 'choice';
+            var compress = e.target.getAttribute("data-compress");
+            var msg = "ROM:"+ compress + e.target.innerHTML + ".bin\n" + romdict[e.target.title];
+            if (window.opener)
+                window.opener.postMessage(msg, window.location.origin);
+        }
+        function htmlDecode(input) {
+            var e = document.createElement('div');
+            e.innerHTML = input;
+            return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
+        }
+    </script>
+    <style type="text/css">
+        #results li {
+            list-style:none;
+            overflow:hidden;
+        }
+            #results li::before {
+                content:'\A0\25BC\A0';
+                border-radius:4px;
+                background-color:rgba(0,0,0,0.25);
+            }
+            #results li.open::before {
+                content:'\A0\25B2\A0';
+            }
+        #roms {
+            height:0;
+            column-width:300px;
+        }
+            #roms li {
+                width: 260px;
+                background-color:rgba(0,0,0,0.25);
+                padding:6px;
+                border-radius:6px;
+                box-shadow:2px 2px 6px black;
+                margin:2px;
+            }
+                #roms li::before {
+                    width: 26px;
+                    height: 20px;
+                    padding:4px;
+                    margin-right:4px;
+    	            font-family: 'icomoon';
+                	content: "\e600";
+                }
+                #roms li.choice::before {
+                    content: "\e603";
+                }
+        h2, li {
+            display: inline-block;
+            margin:0;
+            font-weight:500;
+        }
+        h2 {
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div id="search_controls" style="position:relative;">
+        <div class="logo"></div>
+    </div>
+    <hr />
+    <div id="results"></div>
+    <script type="text/javascript">
+        ZenDom.parse("search_controls", "h2{Browse drum sample rom collection}");
+        // see if we can ease the pain of cross browser css3 animations
+        // make a 'scanner' with abitrary number of led elements
+        var scanner = ZenDom.parse(0, "div#horizontal_loader{Loading xml file:}>div*18");
+        var ledArray = Array.prototype.slice.call(scanner.getElementsByTagName('div'));
+        var stylesel = [];
+        var numsec = 0.8;
+        var delayofs = numsec / ledArray.length;
+        var pcent = Math.floor(100 / ledArray.length * 2);
+        var l = { off: '#802020', on: '#FFEFEF' };
+        ZenDom.setKeyframes("loading", "0%{background-color:" + l.on + "}" + pcent + "%{background-color:" + l.off + "}100%{background-color:" + l.off + "}");
+        ledArray.forEach(function (led, i) {
+            var cls = '.led' + i;
+            led.className = cls.substr(1);
+            ZenDom.setCSS(cls + ';animation-delay: ' + i * delayofs + 's');
+            stylesel.push(cls);
+        });
+        ZenDom.setCSS(stylesel.join(',') + ";height:24px;width:10px;border-radius:2px;display:inline-block;background:" + l.off + ";margin:1px;animation:loading " + numsec + "s ease-in-out infinite");
+        ZenDom.setCSS("#horizontal_loader;display:inline-block;padding:1px 1px 1px 2px;border:1px solid silver;border-radius:4px;box-shadow:2px 2px 3px #000");
+    </script>
+</body>
+</html>

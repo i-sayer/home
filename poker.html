@@ -1,0 +1,270 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Poker</title>
+    <script src="script/_z.js"></script>
+	<link type="text/css" rel="stylesheet" href="cards.css">
+    <style type="text/css">
+        body {
+            font-family: monospace;
+			text-align: center;
+            background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAXCAMAAABDEo1gAAAALVBMVEXu7u7z8/Pt7e3r6+vv7+/x8fHs7Ozw8PDo6Ojq6urp6eny8vL09PT19fX29vbJGhcbAAAB5klEQVR42k2TW4IkIQgEUUQLofb+x91At2b2x1eFaZJ0i7TWdTQTnastfaa1ob4lQraPlmtvy5z7nGvR7h5vyjMDfjOKF+2lYk1UlnjRiAh0X12SeTR4Lx2D1s48Z9Rjl0ZEZGvL0HloWZyin4mTzOz76Y31R6dwN7LJ3tCd8/LTGV0zl47pnScv3eBiYIa3cdt1+uWn1TGu6wH4S8cIobBaYrtT97r8o+htaj843KFld+EuG0ZE4+WrkufNba6Tr/3QruKH58VAxzImfHIX6qsD+gQrNmRCVlbF06kw+JapeyT0l0m1i+aEmBZvgoB115PPCPO5PnpDR4vpqyXVoZxv872K1Bq1/5eQznKyiu/GDE+SBR5+ROj+6BxYq0b5oKxnivIBAYdekHL8yEc3eXh6eVeOTR9BNdCHZpTMUB/RLo1lmy4LO2UdXvQE3W/Yau/bH/noMZHsvjUqqt7SxHBkR06XyVzMv5ncpPRkiusgGSt9FntmmjrcR1PShDdc0BLD2BLWuBhR1zPHvyKKdjKx0+PjIA1XgrJd/1OF/taCYqHJ7g3Xo6fQqh3cWbHHwukv9LPaCy2sjxnUjjaD+DPy8OvyydcK4v4Gi65uNuiZf5rgINhdfb9/DLF+aS/6sXjtRiB/AetLF9OdGDz6AAAAAElFTkSuQmCC);
+        }
+		#score {
+			float:left;
+			color:orange;
+			font-size:120%;
+		}
+		#handsDiv {
+			text-align: center;
+			padding:0;
+			background: rgba(0,0,0,0.1);
+		}
+		button {
+			font-size:140%;
+			padding:1em 2em;
+			margin:4px 0;
+		}
+		h1 {
+			margin:0;
+		}
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+		<h1>HTML5 POKER</h1>
+		<div id="board"></div>
+		<div id="handsDiv"></div>
+	</div>
+    
+<script type="text/javascript">
+    var deck, suitnames = "heart,diamond,spade,club".split(",");
+    function addCard(sec, suit, val, cls)
+    {
+        var c = val < 11 && val || 1;
+		val += cls||"";
+        sec.appendChild(_z.dom(`div.card.${suit}.v${val}>div.front>div.mark*${c}+div.suit++div.back`));
+    }
+    function makeDeck()
+    {
+        return Array.from(Array(52), function (x, i) {
+			var ord = (i%13)+1;
+			return { val: ord, suit: Math.floor(i / 13), rank:(ord>1)?ord:14 };
+		});
+    }
+	function shuffle(deck)
+	{
+		var m = deck.length, t, i;
+
+		while (m) {
+			i = Math.floor(Math.random() * m--);
+			t = deck[m];
+			deck[m] = deck[i];
+			deck[i] = t;
+		}
+		return deck;
+	}
+	var button = document.body.appendChild(_z.dom("button:autofocus=true:Deal"));
+	button.appstate = "Ready";
+	var hands, flop, turn, river;
+	var handsdiv = document.getElementById("handsDiv");
+	var boarddiv = document.getElementById("board")
+	var scoredivs;
+	button.onclick = function () {
+		switch (this.appstate){
+		case "Ready":
+			deck = shuffle(makeDeck());
+			hands = [0,0,0,0];
+			hands = hands.map(function (x){return deck.splice(0,2)});
+			handsdiv.innerHTML = "";
+			hands.forEach(function (hand){
+				var hw = handsdiv.appendChild(_z.dom("div.handwrap>div.score:   "));
+				hand.forEach(function (card) {
+					addCard(hw, suitnames[card.suit], card.val);
+				});
+			});
+			boarddiv.innerHTML = "";
+			flop = deck.splice(0, 3);
+			flop.forEach(function (card) {
+				addCard(boarddiv, suitnames[card.suit], card.val, ".flip");
+			});
+			this.textContent = this.appstate = "Flop";
+			break;
+		case "Flop":
+			Array.from(board.querySelectorAll(".card.flip")).forEach(function(x,i){window.setTimeout(function(){x.classList.remove("flip")}, i*200/*+((i>2)?2000:0)*/)});
+			scoredivs = handsdiv.querySelectorAll("div.score");
+			hands.forEach(function(hand,i,a){
+				a[i] = hand.concat(flop);
+				scoredivs[i].textContent = rankPokerHand(a[i]);
+			});
+			this.textContent = this.appstate = "Turn";
+			break;
+		case "Turn":
+			turn = deck.splice(0, 1);
+			turn.forEach(function (card) {
+				addCard(boarddiv, suitnames[card.suit], card.val, ".flip");
+			});
+			Array.from(board.querySelectorAll(".card.flip")).forEach(function(x,i){window.setTimeout(function(){x.classList.remove("flip")}, i*200/*+((i>2)?2000:0)*/)});
+			scoredivs = handsdiv.querySelectorAll("div.score");
+			hands.forEach(function(hand,i,a){
+				a[i] = hand.concat(turn);
+				scoredivs[i].textContent = rankPokerHand(a[i]);
+			});
+			this.textContent = this.appstate = "River";
+			break;
+		case "River":
+			river = deck.splice(0, 1);
+			river.forEach(function (card) {
+				addCard(boarddiv, suitnames[card.suit], card.val, ".flip");
+			});
+			Array.from(board.querySelectorAll(".card.flip")).forEach(function(x,i){window.setTimeout(function(){x.classList.remove("flip")}, i*200/*+((i>2)?2000:0)*/)});
+			scoredivs = handsdiv.querySelectorAll("div.score");
+			var grade = {rank:-1, best:-1};
+			hands.forEach(function(hand,i,a){
+				a[i] = hand.concat(river);
+				scoredivs[i].textContent = rankPokerHand(a[i]);
+				if (a[i].rank > grade.rank)
+				{
+					grade.rank = a[i].rank;
+					grade.best = i;
+				}
+			});
+			// get the winner(s)
+			hands.forEach(function(hand,i){
+				if (hand.rank == grade.rank)
+					scoredivs[i].parentElement.classList.add("win");
+			});
+			this.textContent = this.appstate = "Ready";
+			break;
+		}
+	}
+	//Array.from(board.querySelectorAll(".card")).forEach((x,i)=>window.setTimeout(()=>{x.classList.remove("flip")}, i*200/*+((i>2)?2000:0)*/));
+    //var hand = [{val:3, suit:2, rank:3},{val:4, suit:2, rank:4},{val:5, suit:2, rank:5},{val:6, suit:2, rank:6},
+	//{val:7, suit:2, rank:7},{val:3, suit:0, rank:3},{val:3, suit:1, rank:3}];
+	
+    /* fails on 3S,5D,KC,3D,KS,5H,KH ???
+	  fails on 1D,2S,3H,4D,5D,6C,QH => 5 high should be 6 high
+    */
+    var club = "M 49.143,8.15 C 43.611,8.15 38.979,10.01 35.205,13.713 31.432,17.416 29.549,21.822 29.549,26.932 29.549,31.104 31.158,35.463 34.393,40.057 31.591,37.722 28.797,36.338 23.486,36.338 13.095,36.338 5.643,44.868 5.643,55.525 5.643,66.826 13.89,75.432 24.893,75.432 35.908,75.432 44.174,67.918 48.236,58.775 48.049,66.229 46.916,72.127 44.83,76.463 42.744,80.799 39.549,84.385 35.236,87.244 32.33,89.166 27.096,90.854 19.549,92.307 L 18.986,94.713 49.143,94.713 79.33,94.713 78.768,92.307 C 71.221,90.854 65.986,89.166 63.08,87.244 58.768,84.385 55.572,80.799 53.486,76.463 51.4,72.127 50.268,66.229 50.08,58.775 54.142,67.918 62.408,75.432 73.424,75.432 84.426,75.432 92.674,66.826 92.674,55.525 92.674,44.868 85.221,36.338 74.83,36.338 69.519,36.338 66.726,37.722 63.924,40.057 67.158,35.463 68.768,31.104 68.768,26.932 68.768,21.822 66.885,17.416 63.111,13.713 59.338,10.01 54.674,8.15 49.143,8.15 Z";
+    var spade = "M 49.419,4.459 C 48.2,9.521 46.325,14.068 43.794,18.052 41.263,22.037 36.755,26.951 30.263,32.834 23.77,38.716 19.653,43.224 17.919,46.365 16.184,49.506 15.325,52.693 15.325,55.927 15.325,60.427 16.825,64.177 19.825,67.177 22.825,70.177 26.481,71.677 30.794,71.677 38.514,71.677 44.485,66.041 48.419,59.896 48.12,66.615 47.013,71.993 45.075,76.021 42.989,80.357 39.795,83.945 35.481,86.802 32.576,88.726 27.341,90.412 19.794,91.865 L 19.231,94.271 49.388,94.271 79.575,94.271 79.013,91.865 C 71.466,90.412 66.23,88.726 63.325,86.802 59.011,83.945 55.817,80.357 53.731,76.021 51.796,71.999 50.688,66.632 50.388,59.927 54.322,66.063 60.333,71.677 68.044,71.677 72.356,71.677 76.012,70.177 79.013,67.177 82.012,64.177 83.512,60.427 83.513,55.927 83.512,52.693 82.653,49.506 80.919,46.365 79.184,43.224 75.067,38.716 68.575,32.834 62.083,26.951 57.575,22.037 55.044,18.052 52.512,14.068 50.637,9.521 49.419,4.459 Z";
+    var heart = "M 50.1532,93.486 C 48.7002,87.955 46.6252,82.763 43.9302,77.912 41.2352,73.06 36.0202,65.525 28.2862,55.306 22.6142,47.806 19.1222,43.048 17.8092,41.033 15.6532,37.752 14.0942,34.74 13.1332,31.998 12.1722,29.256 11.6922,26.478 11.6922,23.666 11.6922,18.463 13.4262,14.103 16.8952,10.588 20.3642,7.072 24.6532,5.314 29.7622,5.314 34.9182,5.314 39.3952,7.142 43.1922,10.798 46.0512,13.517 48.3722,17.572 50.1532,22.963 51.7002,17.666 53.8792,13.634 56.6922,10.869 60.5832,7.119 65.0832,5.244 70.1922,5.244 75.2542,5.244 79.5432,6.99 83.0592,10.482 86.5752,13.974 88.3322,18.134 88.3332,22.963 88.3322,27.181 87.3012,31.576 85.2392,36.146 83.1762,40.716 79.1922,46.705 73.2862,54.111 65.5982,63.814 59.9972,71.783 56.4812,78.017 53.7152,82.939 51.6062,88.095 50.1532,93.486 L 50.1532,93.486 Z";
+    var diamond = "M 49.419,5.322 C 39.927,20.904 29.032,35.606 17.075,49.385 29.044,63.156 40.124,77.822 49.419,93.541 58.714,77.822 69.794,63.156 81.763,49.385 69.805,35.606 58.91,20.904 49.419,5.322 Z";
+    function svgDataUri(fill, path)
+    {
+        var svgt = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="" d=""/></svg>';
+        var urit = 'url("data:image/svg+xml;base64,$$$")';
+        svgt = svgt.replace("fill=\"\"", "fill=\"" + fill + "\"");
+        svgt = svgt.replace(" d=\"\"", " d=\"" + path + "\"");
+        urit = urit.replace("$$$", btoa(svgt));
+        return urit;
+    }
+    var suitcolour = ["red","black"];
+    ["heart", "diamond", "spade", "club"].forEach(function (x,i)
+    {
+        var rule = {};
+        rule["." + x + " .suit::after,." + x + " .mark"] = { "background-image": svgDataUri(suitcolour[i >> 1], window[x]) };
+        _z.json2css(rule);
+    });
+	function rankString(rank)
+	{
+		var n = rank - 11;
+		return (n<0)?rank.toString():["Jack","Queen","King","Ace"][n];
+	}
+	// kicker, max of non community cards if not high
+	function getKick(high, c){
+		var tmp = Math.max(c[0].rank,c[1].rank);
+		if (tmp == high)
+			tmp = Math.min(c[0].rank,c[1].rank);
+		return tmp;
+	}
+	/* if quads in community then highest non-community card is kicker
+	"[{"val":1,"suit":3,"rank":14},{"val":11,"suit":0,"rank":11},{"val":1,"suit":0,"rank":14},{"val":7,"suit":2,"rank":7},{"val":7,"suit":3,"rank":7},{"val":11,"suit":2,"rank":11},{"val":4,"suit":0,"rank":4}]"
+	140512 "[{"val":12,"suit":2,"rank":12},{"val":5,"suit":0,"rank":5},{"val":11,"suit":3,"rank":11},{"val":5,"suit":1,"rank":5},{"val":8,"suit":3,"rank":8},{"val":12,"suit":0,"rank":12},{"val":9,"suit":2,"rank":9}]"
+	*/
+	function getQuad(a,c) {
+		c.high = a.indexOf(0xF);
+		return rankString(c.high)+"s";
+	}
+	function getPair(a,c) {
+		c.high = a.lastIndexOf(0x3);
+		return rankString(c.high)+"s";
+	}
+	function get2Pair(a,c) {
+		c.high = a.lastIndexOf(0x3);
+		c.aux = a.lastIndexOf(0x3, c.high-1);
+		return rankString(c.high)+"s and "+rankString(c.aux)+"s";
+	}
+	function getSet(a,c) {
+		c.high = a.lastIndexOf(0x7);
+		return rankString(c.high)+"s";
+	}
+	function getFull(a,c) {
+		c.high = a.lastIndexOf(0x7);
+		c.aux = a.lastIndexOf(0x3);
+		return rankString(c.high)+"s"+"/"+rankString(c.aux)+"s";
+	}
+	function rankPokerHand(cards) // problem with full full house 3,2,2 : high flush not working when > 5
+	{
+		var modal = (cards.length==7)?3:(cards.length==6)?2:1;
+		var hands = [
+			{r:7,t:"Quad ",f:getQuad}, {r:8,t:"Straight Flush"}, {r:4,t:"Straight"}, {r:5,t:"Flush"}, {r:0,t:"High"}, {r:1,t:"Pair of ",f:getPair},
+			{r:2,t:"2 Pair, ",f:get2Pair}, {r:2,t:"2 Pair, ",f:get2Pair}, {r:3,t:"Set of ",f:getSet}, {r:6,t:"Full House, ",f:getFull}, {r:6,t:"Full House, ",f:getFull}
+		];
+		var cs = cards.map(function(x){return x.rank});
+		var ss = cards.map(function(x){return Math.pow(2,x.suit)});
+
+		var v, i, o, s = 1<<cs[0]|1<<cs[1]|1<<cs[2]|1<<cs[3]|1<<cs[4]|1<<cs[5]|1<<cs[6];
+		var suitCount = [0,0,0,0];
+		for (i=-1, v=o=0; i<(4+modal); i++, o=Math.pow(2,cs[i]*4))
+		{
+			if (i>=0)
+				suitCount[cards[i].suit]++;
+			v += o*((v/o&15)+1);
+		}
+		var flush = {yes:false, high:0};
+		suitCount.forEach(function(x,i){
+			if (x>=5){
+				flush.yes = true;
+				flush.high = cards.filter(function(x){return x.suit===i}).map(function(x){return x.rank}).sort(function(a,b){return a-b}).slice(-1)[0];
+				return;
+			}
+		});
+
+		for (var rcnt = [], t = v; t; t=Math.floor(t/16))
+			rcnt.push(t&0xF);
+		
+		v = v % 15 - modal;
+		if (hands[v].f)
+			hands[v].t += hands[v].f(rcnt,cards);
+		else
+			hands[4].t = rankString(rcnt.length-1)+" high";
+		var vstr = "";//v.toString(10)+"| ";
+		if (flush.yes && hands[v].r<5)
+		{
+			cards.rank = 500000+flush.high*1000;
+			return(vstr+rankString(flush.high)+" high flush");
+		}
+		if ((s&0x403C)==0x403C  && hands[v].r<4)
+		{
+			cards.rank = 400000; // the lowest possible straight
+			return vstr+"5 high straight";
+		}
+		var straight = (s+16384).toString(2).slice(-14).indexOf("11111");
+		if (straight>=0 && hands[v].r<4)
+		{
+			cards.rank = 400000+((13-straight)*1000);
+			return vstr+rankString(13-straight)+" high straight";
+		}
+		//v -= (flush) * (((s&0x7c00) == 0x7c00) ? -5 : 1);
+/*
+		v%15 7 == no pair, 8 == 1pair, 9==2pair, 12==full house
+*/
+		cards.rank = (hands[v].r * 100000) + (cards.high * 1000) + getKick(cards.high, cards);
+		if (cards.aux)
+			cards.rank += cards.aux * 100;
+		return vstr+hands[v].t + (s == 0x403c?" (Ace low)":"");
+	}
+
+</script>
+</body>
+</html>

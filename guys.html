@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>canvas</title>
+    <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(67.5deg,#00467c 50%, #0080a7 50%);
+        }
+        #wrap {
+            margin: auto;
+            max-width: 80vw;
+            max-height: 80vh;
+            width: 80vh;
+            height: 80vw;
+            background: radial-gradient(circle at 40% 30%, rgba(255,255,255,0.75),rgba(255,255,255,0.25) 2%, transparent 2.5%),
+            radial-gradient(circle at 55% 59%,black 31%,transparent 34%),
+            radial-gradient(circle , #334, black 54%, transparent 54.5%);
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            filter: blur(1.5px);
+            transform: rotate(15deg);
+        }
+        #uoalogo {
+            height: 25vh;
+            position: absolute;
+            top: 2vh;
+            right: 2vh;
+        }
+        h1 {
+            font-family: candara, calibri, sans-serif;
+            font-weight: normal;
+            font-size: 6.5vw;
+            text-transform: uppercase;
+            position: absolute;
+            color: white;
+            bottom: 4px;
+            left: 4px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Opal</h1>
+    <div id="wrap"></div>
+    <img id="uoalogo" src="https://mhsfaculty.auckland.ac.nz/_images/logo2018.svg" /> 
+<script>
+    'use strict';
+    var canvas = {
+        a: document.createElement("canvas"),
+        b: document.createElement("canvas")
+        }
+    var ctx = {
+        a: canvas.a.getContext("2d"),
+        b: canvas.b.getContext("2d")
+    }
+    canvas.a.height = canvas.b.height = wrap.offsetHeight;
+    canvas.a.width = canvas.b.width = wrap.offsetWidth;
+    wrap.appendChild(canvas.b);
+
+    var random = Math.random;
+    var rand = n => n * random();
+    var dots = {
+        dotCount: 4000,
+        fov: 340,
+        aux: 0,
+        sphereRadius: 260,
+        dotPropCount: 5, // x,y,x, color, flash
+        dotPropsLength: undefined,
+        dotProps: undefined,
+        minscale: 9999,
+        maxscale: -9999,
+        init: function () {
+            this.dotPropsLength = this.dotCount * this.dotPropCount;
+            this.dotProps = new Float32Array(this.dotPropsLength);
+            this.sphereRadius = canvas.b.width/2.884;
+            let halfwidth = canvas.b.width/2;
+            let halfheight = canvas.b.height/2;
+            let i = 0, r = canvas.b.width;
+
+            while (i<this.dotPropsLength){
+                let coord = [rand(r)-halfwidth, rand(r)-halfwidth, rand(r)-halfwidth];
+                // -- force points to surface of a sphere
+                let sumsqr = coord.reduce(function(a,b){return (a+(b*b))},0);
+                let factor = this.sphereRadius / Math.sqrt(sumsqr);
+                coord = coord.map(u=>u*factor);
+                // -- end
+                coord.push(Math.floor(rand(180)+280)); // a random hue value
+                this.dotProps.set(coord,i);
+                i += this.dotPropCount;
+            }
+        }, rot: function (a1, a2){
+            let i = 0>>0,
+                sina1 = Math.sin(a1),
+                cosa1 = Math.cos(a1);
+            this.aux = sina1*sina1;
+            while (i<this.dotPropsLength){
+                let tx = this.dotProps[i],
+                tz = this.dotProps[i+2];
+                tx = (tx*cosa1)+(tz*sina1);
+                tz = (tx*-sina1)+(tz*cosa1);
+                this.dotProps[i] = tx;
+                this.dotProps[i+2] = tz;
+                if (rand(1)>0.98)
+                    this.dotProps[i+4] = 50;
+                i += this.dotPropCount>>0;
+            }
+        }, plot: function (){
+            var b = 50, i = 0, k;
+            let halfwidth = canvas.b.width/2;
+            let halfheight = canvas.b.height/2;
+            while (i<this.dotPropsLength){
+                let d = this.dotProps.subarray(i, this.dotPropCount+1+i);
+                let fov = this.fov + this.sphereRadius;
+                i += this.dotPropCount;
+                let scale = fov/(fov-d[2]);
+                if (scale<1.2)
+                    continue;
+                b = 240;// + d[4];
+                // if (d[4]>0)
+                //     this.dotProps[i+4] -= 0.125;
+                ctx.b.fillStyle = `hsla(${d[3]}, 100%, ${b}%, ${(scale-1.2)*3})`;
+                let x = ((d[0] * scale) + halfwidth);//>>0;
+                let y = ((d[1] * scale) + halfheight);//>>0;
+                k = 5;//(2 + (d[4]/4)+((scale-1.2)*6)>>0);
+                //ctx.b.fillRect(x, y, k, k);
+                ctx.b.beginPath();
+                ctx.b.arc(x, y, k, 0, 2 * Math.PI, false);
+                ctx.b.closePath();
+                ctx.b.fill();            }
+        }
+    }
+    dots.init();
+    //ctx.b.filter ="blur(4px)";
+    function doFrame(){
+        ctx.b.fillStyle = "#f2f2f0";
+        //ctx.b.fillRect(0, 0, canvas.b.width, canvas.b.height);
+        ctx.b.clearRect(0, 0, canvas.b.width, canvas.b.height);
+        dots.plot();
+        dots.rot(0.0015, 0.01);
+        window.requestAnimationFrame(doFrame);
+    }
+    doFrame();
+
+</script>
+</body>
+</html>

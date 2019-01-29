@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<div class="multicol">
+    <p>This utility uses a selected files extension to determine the required processing. When you select a pch2 file, the patch file is loaded into memory as a pch2 object. The program then checks if there is code in the texpad data of the patch. This is the textpad that is accessed via the G2 editor Patch&gt;Textpad menu option.</p>
+	
+	<p>The code specifically checks that the first line starts with //yo (a comment in javascript). The user is then prompted to confirm that they want to run the code. The whole textpad string is then passed to eval. The code in the textpad has access to any objects and variables that are in context after loading the patch.</p>
+	
+	<p>The following example sets the first level of all sequencers in a group named BossSeq0 ... BossSeq7 to 17.</p>
+	
+	<pre>//yo, set some sequencer levels
+	
+	var boss = pch2.getModuleArray(1, &quot;BossSeq&quot;);
+	
+	boss.forEach( function (seq) { seq.lv[0] = 17 });
+	</pre>
+	
+	<p>getModuleArray() is a member function of the pch2 object, the first parameter is the area (1=Voice,0=FX), the second is the basis for a name search. Digits starting with &quot;0&quot; are appended to the name and all modules in a consecutive sequence are returned in an array of modules.</p>
+	
+	<p>All parameters for modules are stored in the lv[] array. They are all 7bit integers, even those representing on/off parameters. The .pcnt member variable contains the total number of parameters for the module. The total length of a parameter array (.lv[]) is .pcnt * 9 (8 variations+variation init). For example, if pcnt is 4 the lv[] array would look as follows.</p>
+	
+	<table>
+		<tbody>
+			<tr>
+				<td colspan="4">Var 1</td>
+				<td colspan="4">Var 2</td>
+				<td colspan="4">...</td>
+				<td colspan="4">Var 8</td>
+				<td colspan="4">init</td>
+			</tr>
+	        <tr>
+	            <td>1</td>
+	            <td>2</td>
+	            <td>3</td>
+	            <td>4</td>
+	            <td>1</td>
+	            <td>2</td>
+	            <td>3</td>
+	            <td>4</td>
+	            <td>1</td>
+	            <td>2</td>
+	            <td>3</td>
+	            <td>4</td>
+	            <td>1</td>
+	            <td>2</td>
+	            <td>3</td>
+	            <td>4</td>
+	            <td>1</td>
+	            <td>2</td>
+	            <td>3</td>
+	            <td>4</td>
+	        </tr>
+	    </tbody>
+	</table>
+	
+	<p>For a complete list of modules and parameters, you can refer to the expertly crafted source code of g2ools on github.</p>
+	
+	<h1>Case studies</h1>
+	
+	<h2>Oops I lost the empty template.</h2>
+	
+	<p>While working on the G2 Sample playback patch, I accidentally misplaced the original blank template. I still had the first sample set I posted but if used as a template, any unselected variations would default to a sample from the template.</p>
+	
+	<p>There are a lot of sequencers in the patch, 512 levels and 512 gate buttons for each of 8 variations(!). So instead of manually setting them all to zero/off, i put the following code into the textpad.</p>
+	
+	<pre>
+	//yo
+	var seqs = pch2.getModuleArray(1, &quot;SeqLev&quot;);
+	
+	seqs.forEach( function (seq) {
+	    for (var v=0; v&lt;9; v++)
+	        for (var i=0; i&lt;32; i++) // 16 levels + 16 gate buttons
+	            seq.lv[v*seq.pcnt+i] = 0;
+	
+	//end
+	</pre>
+	<p>After loading the pch2 file I was able to download a nicely empty pch2 file to use as a template.</p>
+	
+	<h2>Super sampling test patch</h2>
+	
+	<p>In order to test a multiplexed version of the sample patch that replays at 12K, I needed a test sine wave that had every second sample in a completely separate row of sequencers.</p>
+	
+	<p>So if each row has 64 steps, we calculate a 128 step waveform and rowa[0] = t[0], rowb[0] = t[1], rowa[1] = t[2] etc.</p>
+	
+	<p>So using two rows of four SeqLev modules, the following code did the trick</p>
+	
+	<pre>
+	//yo - not the actual code I used, untested
+	    seqsa = pch2.getModuleArray(1, "rowa");
+	    seqsb = pch2.getModuleArray(1, "rowb");
+	
+	    var rad = Math.PI / seqsa.length*16;
+	    var wave = [];
+	    for (var i=0; i&lt;seqsa.length*32; i++)
+	        wave.push(Math.sin(i*rad));
+	 
+	    var odd = wave.filter( function(z,i){ return ~i%2});
+	    var even = wave.filter( function(z,i){ return i%2});
+	
+	    seqsa.forEach( function (seq, m) {
+	        for (var i=0; i&lt;16; i++)
+	            seq.lv[i] = even[m*16+i]*63+64;
+	        });
+	
+	    seqsb.forEach( function (seq, m) {
+	        for (var i=0; i&lt;16; i++)
+	            seq.lv[i] = odd[m*16+i]*63+64;
+	        });
+	</pre>
+	</div></body>
+</html>

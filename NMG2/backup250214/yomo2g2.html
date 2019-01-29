@@ -1,0 +1,848 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Nord Modular G2 pch2 utilityies</title>
+    <script type="text/javascript" src="moduleDic.js"></script>
+    <script type="text/javascript" src="NordPch2.js"></script>
+    <script type="text/javascript" src="MIDIfile.js"></script>
+    <script type="text/javascript" src="zenDom.js"></script>
+    <link rel="stylesheet" href="yomo2g2.css" type="text/css"/>
+    <style type="text/css">
+        @font-face {
+            font-family: Clave;
+            src: url('Clave2.ttf') format('truetype');
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            color:#DDD;
+            background-color:#A02020;
+            margin:10px 6em;
+        }
+        .logo {
+            font: 900 60px Clave;
+        }
+        input[type='range'] {
+            margin:0;
+            border-right:1px solid white;
+        }
+        .right {
+            position:absolute;
+            right:0;
+            bottom:4px;
+        }
+        .bigText {
+            font-size: x-large;
+        }
+        .heading {
+            height: 60px;
+            color: #28041d;
+            position:relative;
+        }
+        .underline {
+            border-bottom:2px solid #28041d;
+        }
+        .center {
+            text-align:center;
+        }
+        table {
+            border-collapse: collapse;
+            display:inline-block;
+        }
+        td {
+            text-align: right;
+        }
+        td, th {
+            border:1px solid #28041d;
+            padding:1px 6px;
+        }
+        td:first-child {
+            text-align: left;
+        }
+        .toptrm, .bottrm {
+            position: absolute;
+            left: 0;
+            top:44px;
+            height: 256px;
+            border-left: 1px dotted silver;
+        }
+        .bottrm {
+            top:302px;
+        }
+        #controls {
+            display: none;
+            width: 200px;
+            text-align:center;
+        }
+        a {
+                color: white;
+                text-decoration: none;
+        }
+            #controls a {
+                display: none;
+            }
+    </style>
+</head>
+<body>
+    <div class="heading underline"><span class="logo">G2</span><span class="right bigText">Multi-file to pch2 patch file utility</span></div>
+    <p class="center"><input type="file" onchange="kickoff(this)" />We accept <a href='Docs/Wav.html'>8bit_Rom<b>.bin</b>, pcmaudio<b>.wav</b>(or .aif).</a>, <a href="Docs/Self.html">selfSettingPatch<b>.pch2</b></a> and midi<b>.mid</b>: coming soon: scalaTuning<b>.scl</b>.</p>
+    <p class="underline"></p>
+    <div id="controls"><button id="GoButton">Get PCH2</button><a id="DownloadLink" href="#">Download</a></div>
+    <script type="text/javascript">
+        var ftypes = {
+            txt: { proc: proctext, readas: 'readAsText' },
+            bin: { proc: procbin, readas: 'readAsArrayBuffer' },
+            wav: { proc: procwav, readas: 'readAsArrayBuffer' },
+            aif: { proc: procwav, readas: 'readAsArrayBuffer' },
+            aiff: { proc: procwav, readas: 'readAsArrayBuffer' },
+            pch2: { proc: procpch2, readas: 'readAsArrayBuffer' },
+            mid: { proc: procmid, readas: 'readAsArrayBuffer' }
+        };
+        /*
+        var nav = ZenDom.parse(0, "span>button{Make Now}+br+a#download[href='#']{download}");
+        nav.firstChild.onclick = function () { makeAudioPch2(); };//makeAudioPch2;
+        */
+        function kickoff(obj) {
+            if (obj.files[0]) {
+                for (var i = 0; i < Math.min(8, obj.files.length); i++) {
+                    // get extension
+                    var fnm = obj.files[i].name;
+                    var ext = fnm.split('.').pop();
+                    ext = (ext == fnm) ? null : ext.toLowerCase();
+                    if (ext in ftypes) {
+                        var reader = new FileReader();
+                        reader.originalName = fnm;
+                        reader.onload = ftypes[ext].proc;
+                        reader[ftypes[ext].readas](obj.files[i]);
+                    } else
+                        alert("I don't know how to process " + ext);
+                }
+            }
+        }
+        // handy non-critical error function
+        function warning(msg) {
+            alert(msg);
+            return null;
+        }
+        // some dom structures for use in one or more processors
+        structure = {
+            audioTable: {
+                def: "table#audioTable>tr>th{var}+th{source file}+th{samp}+th{type}+th{offset}+th{span}++tr*8>th+td*4+td[data-span='1']", template: "samp01.pch2"
+            },
+            midiTable: {
+                def: "".concat(
+            "table#midiTable[style='display:none']>",
+            "tr>th{Trk}[rowspan='2']+th{Name}[rowspan='2' colspan='2']+th{Notes}[colspan='3']+th[rowspan='2']{Add}++",
+            "tr>th{Tot}+th{B1-32}+th{Unq}++tr>th+td*5+td>select>option{OFF}+option{SLOTA}+option{SLOTB}+option{SLOTC}+option{SLOTD}"),
+                template: "seqtemplate.pch2"
+            }
+        }
+         // ------------------------
+        // start of file processors
+        // ------------------------
+        function procpch2(e, filename) {
+            var pch2 = new pch2_(e.target.result, filename);
+            var text = pch2.getTextPad();
+            if (text) {
+                if (text.substr(0,4) == "//yo")
+                    if (confirm("This pch2 file contains some code, shall I run it?")) {
+                        eval(text);
+                        // update patch in memory
+                        var lnk = document.getElementById("DownloadLink");
+                        pch2.writeParameters(1);
+                        lnk.href = pch2.getUrl();
+                        lnk.download = "samples.pch2";
+                        lnk.style.display = 'inline';
+                        document.getElementById("controls").style.display = "inline-block";
+                        document.getElementById("GoButton").style.display = "none";
+                    }
+            }
+        }
+        function proctext(e, filename) {
+            // can be used for any text based file i.e. scala
+            var text = e.target.result;
+            var lines = text.split(/[\r\n]+/g);
+            alert(lines[0]);
+        }
+        function getStructure(name, f) {
+            // get or create the dom structure for this file type
+            var s = document.getElementById(name);
+            if (s == null) {
+                s = ZenDom.parse(0, structure[name].def);
+                if (f)
+                    s.onclick = f;
+            }
+            return s;
+        }
+        function changeTime(obj) {
+            // delete all old notes
+            var i, grid = document.getElementById("scrollInner");
+            var notes = grid.getElementsByTagName('div');
+            for (i = notes.length - 1; i >= 0 ; i--)
+                grid.removeChild(notes[i]);
+            var fac = parseFloat(obj.options[obj.selectedIndex].value);
+            if (Mid.orgppq == undefined)
+                Mid.orgppq = Mid.ppq;
+            Mid.ppq = Mid.orgppq / fac;
+            for (i = 0; i < Mid.tracks.length; i++)
+                drawNotes(Mid, i);
+        }
+        function getNoteName(n, nn) {
+            var oct = Math.floor(n.notenum / 12) - 1;
+            return nn[n.notenum % 12] + oct + "(" + n.notenum + ")V" + n.vel;
+        }
+        function drawNotes(midi, tracknum) {
+            var track = midi.tracks[tracknum];
+            if (track.notes.length == 0)
+                return;
+            var f = midi.ppq / 96;
+            var grid = document.getElementById("scrollInner");
+            var maxtime = (96 * 16 * 8) * f;
+            var topadj = midi.topadj | 0;
+            // create absolute positioned div for each note
+            for (var i = 0; i < track.notes.length; i++) {
+                n = track.notes[i];
+                if (n.start + n.length > maxtime)
+                    break;
+                nd = document.createElement("div");
+                // calculate top offset, left offset and width
+                nd.style.top = ((127 - n.notenum) * 8 + 21 - topadj) + "px";
+                nd.style.left = ((Math.floor(n.start / f))) + "px";
+                nd.style.width = ((Math.floor(n.length / f))) + "px";
+                nd.className = "track" + tracknum;
+                nd.title = getNoteName(n, midi.notenames);
+                grid.appendChild(nd);
+            }
+        }
+        function procmid(e, filename) {
+            var midiTable = getStructure("midiTable");
+            var ss = ZenDom.parse(document.body, "div#scrollWrapper>div#scrollInner>span.bar*32+canvas#notegridbackground[height='192' width='12288']", {});
+            var bars = ss.querySelectorAll(".bar");
+            for (var i = 0; i < bars.length; i++)
+                bars[i].innerHTML = "B" + (i + 1);
+            function fillGrid(topnote) {
+                var canv = ss.querySelector("#notegridbackground");
+                // draw a sample grid on the canvas
+                var ctx = canv.getContext('2d');
+                var keycolours = ["#999", "#777", "#999", "#777", "#999", "#999", "#777", "#999", "#777", "#999", "#777", "#999"];
+                for (var i = 0; i < canv.height; i += 8) {
+                    var cx = (Math.floor(i / 8) + topnote + 2) % 12;
+                    ctx.fillStyle = keycolours[cx];
+                    ctx.fillRect(0, i, canv.width, i + 8);
+                }
+                ctx.strokeStyle = "#FFF";
+                for (var i = 0; i < canv.width; i += 24) {
+                    ctx.strokeStyle = "#FFF";
+                    ctx.lineWidth = 0.5;
+                    if (i % 96 == 0)
+                        ctx.strokeStyle = "#000";
+                    else if (i % 24 == 0)
+                        ctx.strokeStyle = "#655";
+                    if (i % 384 == 0)
+                        ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i, canv.height);
+                    ctx.stroke();
+                }
+            }
+            Mid = new mid_(e.target.result, e.target.originalName);
+            // setup preview page for this midi file
+            var trackTable = document.getElementById("midiTable");
+            var grid = document.getElementById("scrollInner");
+            var gridwidth = grid.offsetWidth;
+            var ttg = (gridwidth / 96) * Mid.ppq;
+            /*
+            var fileInfo = document.getElementById("infoMid").rows;
+            fileInfo[0].cells[0].innerHTML = "Midi File";
+            fileInfo[0].cells[1].innerHTML = Mid.filename;
+            fileInfo[1].cells[0].innerHTML = "Format";
+            fileInfo[1].cells[1].innerHTML = Mid.format;
+            fileInfo[2].cells[0].innerHTML = "PPQ";
+            fileInfo[2].cells[1].innerHTML = Mid.ppq;
+            //document.getElementById("file_select").style.display = 'none';
+            var stepli = document.getElementById("intro").getElementsByTagName('li');
+            stepli[0].style.color = stepli[2].style.color = "black";
+            stepli[1].style.color = "white";
+            document.getElementById('pchchoose').style.display = "block";
+            */
+            var controls = document.getElementById("controls");
+            ZenDom.parse(controls, "div>hr+label{Change timing}>select#timescale[onchange='changeTime(this)']>" +
+                "option[value='0.5']{2:1}+option[value='1' selected='selected']{1:1}+option[value='2']{1:2}+option[value='6']{1:6}");
+            controls.style.display = "inline-block";
+            document.getElementById("GoButton").addEventListener("click", getmidipch2, true);
+            trackTable.style.display = "inline-block";
+            var row = trackTable.rows[2];
+            var cells = row.cells;
+            var topnote = 0;
+            var trkn = 1;
+            var botnote = 127;
+            for (var i = 0; i < Mid.numtracks; i++) {
+                cells[0].innerHTML = i + 1;
+                cells[2].innerHTML = Mid.tracks[i].trackName;
+                cells[3].innerHTML = Mid.tracks[i].notes.length;
+                var chk = cells[6].firstChild;
+                chk.selectedIndex = 0;
+                chk.style.display = "none";
+                if (Mid.tracks[i].notes.length) {
+                    cells[1].className = "track" + trkn++;
+                    var st = Mid.tracks[i].getNoteStatistics(0, ttg);
+                    if (st.hi > topnote)
+                        topnote = st.hi;
+                    if (st.lo < botnote)
+                        botnote = st.lo;
+                    cells[4].innerHTML = st.count;
+                    cells[5].innerHTML = st.uniqueCount;
+                    chk.selectedIndex = 2;
+                    chk.style.display = "inline";
+                    drawNotes(Mid, i);
+                }
+                if (i < Mid.numtracks - 1) {
+                    var newrow = row.cloneNode(true);
+                    //trackTable.getElementsByTagName('tbody')[0].appendChild(newrow);
+                    trackTable.appendChild(newrow);
+                    cells = newrow.cells;
+                }
+            }
+            // shift notes into view
+            var grid = document.getElementById("scrollInner");
+            var notedivs = grid.getElementsByTagName('div');
+            var newtopAdjust = ((125 - topnote) * 8);
+            for (var i = 0; i < notedivs.length; i++) {
+                var nt = (parseInt(notedivs[i].style.top) - newtopAdjust) + "px";
+                notedivs[i].style.top = nt;
+            }
+            Mid.topadj = newtopAdjust;
+            //grid.style.marginTop = ((125 - topnote) * -8) + "px";
+            document.getElementById("notegridbackground").height = (topnote - botnote + 4) * 8;
+            // redraw backgound
+            fillGrid(topnote);
+            function getmidipch2() {
+                // get our template
+                var oReq = new XMLHttpRequest();
+                oReq.open("GET", "seqtemplate2.pch2", true);
+                oReq.responseType = "arraybuffer";
+                oReq.onload = function (oEvent) {
+                    var arrayBuffer = oReq.response;
+                    if (arrayBuffer)
+                        mid2pch2(new pch2_(arrayBuffer, "basicseq32.pch2"));
+                }
+                oReq.send(null);
+            }
+        }
+
+        function mid2pch2(pch2, _ppq) {
+            // manipulate levels in pch2 sequencers and make a new pch2 file
+            this.param = {
+                sixteenthsPerVar: 4 * 16,
+                ppq: Mid.ppq,
+                pps: Mid.ppq / 4,
+                notesends: 25
+            };
+            var ns = pch2.getModuleArray(1, "notea").concat(pch2.getModuleArray(0, "notea"));
+            param.notesends = ns.length;
+            // for each variation: we need a list of unique note events and a boolian if the note gate on intersects with each of the 16th notes.
+            function sequnit(startbar, param) {
+                this.startbar = startbar;
+                this.starttime = startbar * param.ppq * 4;
+                this.endtime = this.starttime + param.sixteenthsPerVar * param.ppq / 4;
+                this.clearArray = new Int8Array(param.sixteenthsPerVar);
+                function row(param) {
+                    this.notenum = 0;
+                    this.slot = 0;
+                    this.free = true; // boolean, can be reassigned notenum as last 16th vel == 0
+                    this.col = new Int8Array(param.sixteenthsPerVar); // store velocity for each 16th note segment, 0 = no gate
+                }
+                this.rows = [];
+                for (var i = 0; i < param.notesends; i++)
+                    this.rows.push(new row(param));
+                this.nextVar = function () {
+                    // setup for next variation block
+                    this.startbar++;
+                    this.starttime = this.startbar * param.ppq * param.sixteenthsPerVar / 4;
+                    this.endtime = this.starttime + param.sixteenthsPerVar * param.ppq / 4;
+                    for (var i = 0; i < this.rows.length; i++) {
+                        // check if gate was on for last step
+                        var lastwason = this.rows[i].col[param.sixteenthsPerVar - 1] > 0;
+                        this.rows[i].col.set(this.clearArray); // reset all the values
+                        if (!lastwason) {
+                            this.rows[i].free = true;
+                            this.rows[i].notenum = 0;
+                        }
+                    }
+                }
+                this.takeNote = function (n, param, slot) {
+                    if (n == undefined)
+                        return false;
+                    var i, j, roundnotelen;
+                    // make sure note is at least 1 sequencer step long
+                    roundnotelen = Math.max((param.pps), n.length);
+                    if (n.start >= this.endtime)
+                        return false; // wont happen in this block of time so give up
+                    if ((n.start + roundnotelen) < this.starttime)
+                        return true; // all over before this block but keep requesting
+                    var stsx = Math.max(0, Math.floor((n.start - this.starttime) / param.pps));
+                    var ensx = Math.min(param.sixteenthsPerVar, Math.floor((n.start - this.starttime + roundnotelen) / param.pps));
+                    // find matching or available row
+                    for (i = 0; i < param.notesends; i++)
+                        if (this.rows[i].notenum == n.notenum && this.rows[i].slot == slot)
+                            break;
+                    if (i == param.notesends)
+                        // no match, check for a free row for this variation
+                        for (i = 0; i < param.notesends; i++)
+                            if (this.rows[i].free) {
+                                this.rows[i].free = false;
+                                this.rows[i].slot = slot;
+                                this.rows[i].notenum = n.notenum;
+                                break;
+                            }
+                    if (i < param.notesends) // we have a row so write vel into as many steps as required
+                    {
+                        for (j = stsx; j < ensx; j++)
+                            this.rows[i].col[j] = n.vel;
+                        // in case this note runs into previous, reset the step before gate start
+                        if (stsx)
+                            this.rows[i].col[stsx - 1] = 0;
+                    }
+                    return true;
+                }
+            }
+            var surow = [];
+            surow.push(pch2.getModuleArray(1, "rowa"));
+            surow.push(pch2.getModuleArray(1, "rowb"));
+            surow.push(pch2.getModuleArray(0, "rowc"));
+            surow.push(pch2.getModuleArray(0, "rowd"));
+
+            surow.push(pch2.getModuleArray(1, "rowv"));
+            surow.push(pch2.getModuleArray(0, "rowv"));
+            param.sixteenthsPerVar = surow[0].length * 16;
+            var su = new sequnit(0, this.param);
+            var varmul = surow[0][0].pcnt;
+            var ttabchks = document.getElementById('midiTable').getElementsByTagName('select');
+            for (var variation = 0; variation < 8; variation++) {
+                if (variation > 0)
+                    su.nextVar();
+                var slot = 0;
+                for (var t = 0; t < ttabchks.length; t++)
+                    if (slot = ttabchks[t].selectedIndex)
+                        for (var i = 0; su.takeNote(Mid.tracks[t].notes[i], this.param, slot) ; i++)
+                            ;
+                // set note numbers starting from top row
+                var notesendmul = ns[0].pcnt;
+                var bw = new Uint32Array(param.sixteenthsPerVar);
+                var avgvel = new Uint8Array(param.sixteenthsPerVar);
+                // need another array to accumulate avg velocity
+                for (var i = 0; i < ns.length; i++) {
+                    ns[i].lv[1 + variation * notesendmul] = su.rows[i].notenum;
+                    ns[i].lv[2 + variation * notesendmul] = su.rows[i].slot + 16;
+                    // for each column in row, accumulate a binary weight if vel > 0
+                    var bitw = Math.pow(2, i);
+                    for (j = 0; j < param.sixteenthsPerVar; j++)
+                        if (su.rows[i].col[j] > 0)
+                            bw[j] |= bitw;
+                }
+                for (var i = 0; i < param.sixteenthsPerVar; i++) {
+                    // count notes and accumulate velocity average for each step
+                    var velacc = 0;
+                    var velcnt = 0;
+                    for (var j = 0; j < ns.length; j++) {
+                        if (!su.rows[j].free) {
+                            var prev = (i == 0) ? 0 : su.rows[j].col[i - 1];
+                            if (su.rows[j].col[i] > 0) {
+                                if (prev == 0) {
+                                // add code to separate v/fx area ns
+                                    velcnt++;
+                                    velacc += su.rows[j].col[i];
+                                }
+                            }
+                        }
+                    }
+                    avgvel[i] = Math.floor(velacc / velcnt);
+                }
+
+                // now we have all the binary coded columns, time to set the sequencer levels
+                // need to rework this to work with variable number of sequencer rows
+                for (var j = 0; j < param.sixteenthsPerVar; j++) {
+                    var seqmod = Math.floor(j / 16);
+                    var levidx = (j % 16) + (variation * varmul);
+                    var shift = 0;
+                    for (var k = 0; k < 4; k++) {
+                        if (surow[k].length == 0)
+                            break;
+                        surow[k][seqmod].lv[levidx] = (bw[j] & (0x7F << shift)) >> shift;
+                        surow[k][seqmod].lv[16 + levidx] = (bw[j] & (0x80 << shift)) ? 1 : 0;
+                        shift += 8;
+                    }
+                    // seqv is for velocity but gate goes to 24th note
+                    surow[4][seqmod].lv[levidx] = avgvel[j];
+                    surow[5][seqmod].lv[levidx] = avgvel[j];
+                }
+            }
+            // now we need to rewrite the controls chunk and recalc crc
+            pch2.writeParameters(1);
+            pch2.writeParameters(0);
+            var url = pch2.getUrl();
+            var lnk = document.getElementById("DownloadLink");
+            lnk.download = Mid.filename.substr(0, Mid.filename.length - 3) + "pch2";
+            lnk.href = url;
+            lnk.style.display = 'inline';
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////
+        // end of midi code
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+        function procwav(e) {
+            var audioTable = getStructure("audioTable", audioTableClick);
+            var rowarray = Array.prototype.slice.call(audioTable.rows);
+            var rows = (rowarray.filter(function (i) { return i.cells[0].innerHTML == ""; }));
+            if (rows.length == 0)
+                return warning("Table is all full!");
+            var cells = rows[0].cells;
+            Wav = new _wav(e.target.result, e.target.originalName);
+            cells[0].innerHTML = 9 - rows.length;
+            cells[1].innerHTML = Wav.filename;
+            cells[2].innerHTML = Wav.sampleRate;
+            cells[3].innerHTML = ((Wav.channels == 1) ? "mono:" : "stereo:") + Wav.bitDepth + "bit";
+            cells[4].innerHTML = "0";
+            cells[5].innerHTML = "1";
+            document.getElementById("controls").style.display = "inline-block";
+            document.getElementById("GoButton").addEventListener("click", makeAudioPch2, true);
+            rows[0].Wav = Wav;
+            Wav.rom.parentRow = rows[0];
+            Wav.rom.drawWave();
+            Wav.rom.decimate(2);
+        }
+        function procbin(e) {
+            var audioTable = getStructure("audioTable", audioTableClick);
+            var rowarray = Array.prototype.slice.call(audioTable.rows);
+            var rows = (rowarray.filter(function (i) { return i.cells[0].innerHTML == ""; }));
+            if (rows.length == 0) {
+                makeAudioPch2();
+                return warning("Table is all full!");
+            }
+            var cells = rows[0].cells;
+            Rom = new _rom(e.target.result, e.target.originalName);
+            cells[0].innerHTML = 9 - rows.length;
+            cells[1].innerHTML = Rom.filename;
+            cells[2].innerHTML = "~22000";
+            if (Rom.alaw)
+                cells[3].innerHTML = "mono:8bit,a-law";
+            else
+                cells[3].innerHTML = "mono:8bit";
+            cells[4].innerHTML = "0";
+            cells[5].innerHTML = "1";
+            document.getElementById("controls").style.display = "inline-block";
+            document.getElementById("GoButton").addEventListener("click", makeAudioPch2, true);
+            rows[0].Rom = Rom;
+            Rom.parentRow = rows[0];
+            Rom.drawWave();
+            Rom.decimate(2);
+        }
+         //
+        // javascript function objects 
+       //
+        function _wav(data, filename) {
+            this.data = data;
+            this.filename = filename;
+            var dataview = new DataView(this.data);
+            var ofs = 8;
+            var hdr = dataview.getInt32(0);
+            if (hdr == 0x52494646/*RIFF*/)
+                this.bigEndian = true;
+            else if (hdr == 0x52494658/*RIFX*/)
+                this.bigEndian = false;
+            else if (hdr == 0x464f524d/*FORM*/)
+                this.bigEndian = false;
+            else
+                return warning("Not RIF[F|X] or FORM");
+
+            // walk the chunks (I always wanted to say that)
+            var chunksize;
+            do {
+                hdr = dataview.getInt32(ofs);
+                chunksize = dataview.getInt32(ofs + 4, this.bigEndian) + 8;
+                if (hdr == 0x57415645 /*WAVE*/) {
+                    hdr = dataview.getInt32(ofs + 4);
+                    if (hdr == 0x666d7420/*fmt */) {
+                        chunksize = dataview.getInt32(ofs + 8, this.bigEndian) + 12;
+                        this.audioFormat = dataview.getInt16(ofs + 12, this.bigEndian);
+                        this.channels = dataview.getInt16(ofs + 14, this.bigEndian);
+                        this.bitDepth = dataview.getInt16(ofs + 26, this.bigEndian);
+                        this.sampleRate = dataview.getInt32(ofs + 16, this.bigEndian);
+                    }
+                }
+                else if (hdr == 0x41494646 /*AIFF*/) {
+                    hdr = dataview.getInt32(ofs + 4);
+                    if (hdr == 0x434f4d4d/*COMM*/) {
+                        chunksize = dataview.getInt32(ofs + 8, this.bigEndian) + 12;
+                        this.channels = dataview.getInt16(ofs + 12, this.bigEndian);
+                        // dont care this.frames = dataview.getInt32(ofs + 14, this.bigEndian);
+                        // bastards!!! sample rate stored as 80bit float
+                        var mantissa = dataview.getUint16(ofs + 22, this.bigEndian) +
+                            dataview.getUint16(ofs + 24, this.bigEndian) * 65536;
+                        // need to check if the above works with rates > 48K
+                        this.sampleRate = mantissa;
+                        this.bitDepth = dataview.getInt16(ofs + 18, this.bigEndian);
+                    }
+                }
+                else if (hdr == 0x64617461 /*data*/) {
+                    this.dataOffset = ofs + 8;
+                    break; // remove if we want to check all chunks
+                }
+                else if (hdr == 0x53534e44 /*SSND*/) {
+                    this.dataOffset = ofs + 16;
+                    break; // remove if we want to check all chunks
+                }
+                ofs += chunksize;
+            } while (ofs < this.data.byteLength);
+            if (!this.dataOffset)
+                return warning('Error reading header, no data offset found');
+            this.rom = new _rom(this, this.filename);
+            return this;
+        }
+        // the _wav object depends on _rom for display, decimation and compression
+        function _rom(data, filename) {
+            // ROM image file contains a-law compressed 8 bit data
+            if (data.toString() == "[object ArrayBuffer]") {
+                this.data = data;
+                this.filename = filename;
+                this.alaw = true; // be nice to automatically check
+                if (filename.indexOf("27")>0)
+                    this.alaw = false;
+            } else {
+                // assume called with initialised _wav object
+                this.filename = data.filename;
+                if (data.bitDepth == 8)
+                    var w = new Int8Array(data.data, data.dataOffset, Math.min(8192, (data.data.byteLength-data.dataOffset))); // ref to the original wave data
+                else
+                    var w = new Int16Array(data.data, data.dataOffset, Math.min(8192, (data.data.byteLength - data.dataOffset) / 2)); // ref to the original wave data
+                var wa = Array.apply([], w);
+                if (data.channels > 1)
+                    wa = wa.filter(function (v, i) { return i % 2 });
+                if (data.bitDepth == 8)
+                    wa = wa.map(function (v) { return v * 256; });
+                else {
+                    if (!data.bigEndian) { // need to swap bytes
+                        var dv = new DataView(data.data, data.dataOffset);
+                        for (var i = 0; i < wa.length; i++) {
+                            var ne = dv.getInt16(i*2, false);
+                            wa[i] = ne;
+                        }
+                    }
+                }
+                //this.data = new Uint8Array(wa.map(this.alawCompress));
+                this.wdata = wa;
+            }
+            this.windowSize = 4096;
+            this.scale = 1;
+
+            this.drawWave = function () {
+                if (!this.wdata)
+                    var dataarray = new Uint8Array(this.data);
+                //if (!sc)
+                //    sc = ZenDom.parse(0, "div#scratch");
+                //var node;
+                //while (node = sc.firstChild)
+                //    sc.removeChild(node);
+                var parentRow = this.parentRow;
+                var canvas = document.getElementById('wave_canvas');
+                if (!canvas) {
+                    // first time here, time to constuct what we need
+                    canvas = ZenDom.parse(null, "canvas#wave_canvas[width='" + this.windowSize + "' height='512']");
+                    var ed = ZenDom.parse(0, "div[style='position:relative']>input#trimmer[type='range' max='256' style='width:256px']+div.toptrm+div.bottrm++" +
+                        "button.dec{1:1}++button.dec{2:1}++button.dec{3:1}++button.dec{4:1}++button.dec{5:1}++button.dec{6:1}"
+                        );
+                    ed.appendChild(canvas);
+                }
+                var slider = document.getElementById("trimmer");
+                var tdiv = slider.nextSibling;
+                var bdiv = tdiv.nextSibling;
+                var rrr = this.ratio;
+                function setTrim() {
+                    var pos = slider.value;
+                    parentRow.cells[4].innerHTML = pos;
+                    tdiv.style.left = pos + "px";
+                    if (rrr)
+                        bdiv.style.left = (pos / rrr) + "px";
+                }
+                slider.onchange = setTrim;
+                slider.value = parentRow.cells[4].innerHTML;
+                setTrim();
+                var decibutt = canvas.parentElement.querySelectorAll('button.dec');
+                for (var i = 0; i < decibutt.length; i++)
+                    decibutt[i].onclick = this.decimate.bind(this, i + 1);
+                var ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                var baseline = ctx.canvas.height / 4;
+                ctx.beginPath();
+                ctx.moveTo(0, baseline);
+                if (!this.wdata) {
+                    for (var x = 0; x < this.windowSize; x += this.scale) {
+                        var y = (this.alaw) ? this.alawExpand(dataarray[x * this.scale]) * 0.015625/* scale = 128/8192*/ : dataarray[x] - 128;
+                        ctx.lineTo(x, baseline + y);
+                    }
+                } else {
+                    for (var x = 0; x < this.windowSize; x += this.scale) {
+                        var y = this.wdata[x * this.scale] * 0.00390625; // scale = 128/32768
+                        ctx.lineTo(x, baseline + y);
+                    }
+                }
+                if (this.downSampledData) {
+                    baseline *= 3;
+                    ctx.moveTo(0, baseline);
+                    for (var x = 0; x < this.windowSize; x += this.scale) {
+                        var y = this.alawExpand(this.downSampledData[x * this.scale]) * 0.015625;
+                        ctx.lineTo(x, baseline + y);
+                    }
+                }
+                ctx.stroke();
+            }
+            this.decimate = function (n) {
+                //var n = parseInt(e.target.getAttribute('data-val'));
+                this.ratio = n;
+                var gain = 1.0 / 1.960337404;
+                var xcoeffs = [-0.1200421755, -0.0000000000, +0.6002108774, +1.0000000000, +0.6002108774, -0.0000000000, -0.1200421755];
+                var ncoeff = xcoeffs.length;
+                var dsmp = [];
+                // get float version of data
+                if (!this.wdata) {
+                    var dataarray = new Uint8Array(this.data);
+                    var wfloat = [];
+                    for (var i = 0; i < dataarray.length; i++)
+                        wfloat.push((this.alaw)?this.alawExpand(dataarray[i]):(dataarray[i]-128)*64);
+                    var wfloata = new Float64Array(wfloat);
+                } else
+                    var wfloata = new Float64Array(this.wdata);
+                // apply filter and discard all but nth
+                for (var i = 0; i < wfloata.length; i += n) {
+                    if (n == 1) {
+                        dsmp.push(wfloata[i]);
+                        continue; // no filter, just float copy of sample data for compression
+                    }
+                    var tmp = wfloata.subarray(i, i + ncoeff);
+                    var sum = 0.0;
+                    for (var j = 0; j < ncoeff; j++) {
+                        sum += tmp[j] * xcoeffs[j];
+                    }
+                    dsmp.push(sum * gain);
+                }
+                // create alaw compressed version
+                if (this.wdata)
+                    dsmp = dsmp.map(function (i) { return i * 0.25 }); // scale to 14 bits
+                this.downSampledData = new Uint8Array(dsmp.map(this.alawCompress));
+                this.drawWave();
+            }
+            this.alawExpand = function (b8) {
+                var exp = ((b8 & 0x70) >> 4) + 1;
+                var man = (b8 & 0x0F) | 0x10;
+                var b14 = (man << exp);
+                if (b8 > 127)
+                    b14 = 0 - b14;
+                return b14;
+            }
+            this.alawCompress = function (b14) {
+                var leadingZerosTable = [ // need to check if declaration like this impacts performance
+                    7, 6, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3,
+                    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ];
+                var abs = Math.floor(Math.min(8193, Math.abs(b14)));
+                var lz = leadingZerosTable[((abs & 0x1FC0) >> 6)];
+                var man = ((abs >> (8 - lz)) & 0xF);
+                var b8 = ((b14 < 0) ? 0x80 : 0) | ((7 - lz) << 4) | man;
+                return b8;
+            }
+            if (!this.data)
+                this.data = new Uint8Array(wa.map(this.alawCompress));
+            return this;
+        }
+        function audioTableClick(e) {
+            var row = e.target.parentElement;
+            var cell = e.target;
+            if (cell.getAttribute("data-span")) {
+                var span = parseInt(cell.innerHTML);
+                cell.innerHTML = span + 1;
+            }
+            if (row.Wav)
+                row.Wav.rom.drawWave();
+            else if (row.Rom)
+                row.Rom.drawWave();
+        }
+        function makeAudioPch2() {
+            // get our template
+            var oReq = new XMLHttpRequest();
+            oReq.open("GET", "samp-in-x2.pch2", true);
+            oReq.responseType = "arraybuffer";
+            oReq.onload = function (oEvent) {
+                var arrayBuffer = oReq.response;
+                if (arrayBuffer)
+                    procpch2Audio(new pch2_(arrayBuffer, "samp01.pch2"));
+            }
+            oReq.send(null);
+        }
+        function setFilenameInTextpad(ar, rn, rows) {
+            var sstr = rows[rn].cells[1].innerHTML.split("");
+            var dstr = ar[rn].split("");
+            var ratio = '0';
+            if (rows[rn].Wav)
+                ratio = rows[rn].Wav.rom.ratio;
+            else
+                ratio = rows[rn].Rom.ratio;
+            dstr[3] = ratio;
+            for (var j = 7; j < ar[rn].length - 8; j++)
+                dstr[j] = (j < sstr.length + 9) ? sstr[j - 7] : ' ';
+            ar[rn] = dstr.join("");
+        }
+        function procpch2Audio(pch2) {
+            // get data from all variation roms and set levels
+            var seqa = pch2.getModuleArray(1, "seqa").concat(pch2.getModuleArray(0, "seqa"));
+            var seqb = pch2.getModuleArray(1, "seqb").concat(pch2.getModuleArray(0, "seqb"));
+            var rows = document.getElementById("audioTable").rows;
+            var tpa = pch2.getTextPad().split("\r");
+            for (var r = 1; r < Math.max(8, rows.length) ; r++) {
+                var thisrom = null;
+                try {
+                    if (rows[r].Wav)
+                        thisrom = rows[r].Wav.rom;
+                    else if (rows[r].Rom)
+                        thisrom = rows[r].Rom;
+                    if (!thisrom)
+                        continue;
+                } catch (e) {
+                    break;
+                }
+                var span = parseInt(rows[r].lastChild.innerHTML);
+                setFilenameInTextpad(tpa, r, rows);
+                var bin = new Uint8Array(thisrom.downSampledData);
+                var trimOffset = parseInt(rows[r].cells[4].innerHTML);
+                var varofs = seqa[0].pcnt * (r-1);
+                var sampinpatch = seqa.length * 32;
+                for (var i = 0; i < sampinpatch * span; i += 2) {
+                    var spanofs = Math.floor(i / sampinpatch)*seqa[0].pcnt;
+                    var seqix = Math.floor(i / 32) % seqa.length;
+                    var vala = bin[i + trimOffset];
+                    var valb = bin[i + trimOffset + 1];
+                    var ix = ((i >> 1) % 16);
+                    seqa[seqix].lv[ix + varofs + spanofs] = vala & 0x7f;
+                    seqa[seqix].lv[ix + 16 + varofs + spanofs] = (vala & 0x80) ? 1 : 0;
+                    seqb[seqix].lv[ix + varofs + spanofs] = valb & 0x7f;
+                    seqb[seqix].lv[ix + 16 + varofs + spanofs] = (valb & 0x80) ? 1 : 0;
+                }
+            }
+            pch2.setTextPad(tpa.join("\r"));
+            pch2.writeParameters(1);
+            pch2.writeParameters(0);
+            var url = pch2.getUrl();
+            var lnk = document.getElementById("DownloadLink");
+            lnk.href = url;
+            lnk.download = "samp-out-x2.pch2";
+            lnk.style.display = 'inline';
+        }
+    </script>
+</body>
+</html>

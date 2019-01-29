@@ -1,0 +1,241 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+        var content;
+        google.load("gdata", "1.x");
+        google.setOnLoadCallback(getMyBlogFeed);
+        var handleError = function(error) {
+            content.innerHTML = '<pre>' + error + '</pre>';
+        };
+        var handleResults = function (resultsFeedRoot) {
+            var blogFeed = resultsFeedRoot.feed;
+            var blogTitle = blogFeed.getTitle().getText();
+/*
+            var startTime = google.gdata.DateTime.toIso8601(query.getPublishedMin());
+            var endTime = google.gdata.DateTime.toIso8601(query.getPublishedMax());
+*/
+            content.innerHTML = '<p>Query: <strong>' + blogTitle
+                              + '</strong> posts between ' + 'a' + ' and '
+                              + 'b' + '</p>';
+
+            // Buffer output until all tags are closed
+            var html = '<ul>';
+            var postEntries = blogFeed.getEntries();
+            for (var i = 0; postEntry = postEntries[i]; i++) {
+                var postTitle = postEntry.getTitle().getText();
+                var pubDate = google.gdata.DateTime.toIso8601(postEntry.getPublished().getValue());
+                var body = postEntry.content.getText();
+
+                html += '<li><strong>Post Title:</strong> ' + postTitle + '<br />' +
+                        'Published: ' + pubDate + '</li>';
+                html += '<ul><li>' + body + '</li></ul>';
+            }
+            html += '</ul>';
+            content.innerHTML += html;
+        };
+        function getMyBlogFeed() {
+            content = document.getElementById("content");
+            var blog = new google.gdata.blogger.BloggerService('test-app1');
+            var query = new google.gdata.blogger.BlogPostQuery('http://www.blogger.com/feeds/3804283511858027145/posts/default');
+            var start = new Date("March 01, 2014 00:00:00");
+            var end = new Date("March 11, 2014 00:00:00");
+            query.setPublishedMin(new google.gdata.DateTime(start));
+            query.setPublishedMax(new google.gdata.DateTime(end));
+            blog.getBlogPostFeed(query, handleResults, handleError);
+        }
+    </script>
+    <title>Google data api test</title>
+</head>
+<body>
+    <h1>test</h1>
+    <div id="content"><h3>Getting Blog Posts ...</h3>
+<style>
+#ballsWaveG{
+position:relative;
+width:128px;
+height:30px}
+
+.ballsWaveG{
+position:absolute;
+top:0;
+background-color:#000000;
+width:16px;
+height:16px;
+-moz-animation-name:ballsWaveG;
+-moz-animation-duration:1.3s;
+-moz-animation-iteration-count:infinite;
+-moz-animation-direction:linear;
+-moz-border-radius:8px;
+-webkit-animation-name:ballsWaveG;
+-webkit-animation-duration:1.3s;
+-webkit-animation-iteration-count:infinite;
+-webkit-animation-direction:linear;
+-webkit-border-radius:8px;
+-ms-animation-name:ballsWaveG;
+-ms-animation-duration:1.3s;
+-ms-animation-iteration-count:infinite;
+-ms-animation-direction:linear;
+-ms-border-radius:8px;
+-o-animation-name:ballsWaveG;
+-o-animation-duration:1.3s;
+-o-animation-iteration-count:infinite;
+-o-animation-direction:linear;
+-o-border-radius:8px;
+animation-name:ballsWaveG;
+animation-duration:1.3s;
+animation-iteration-count:infinite;
+animation-direction:linear;
+border-radius:8px;
+}
+
+#ballsWaveG_1{
+left:0;
+-moz-animation-delay:0.52s;
+-webkit-animation-delay:0.52s;
+-ms-animation-delay:0.52s;
+-o-animation-delay:0.52s;
+animation-delay:0.52s;
+}
+
+#ballsWaveG_2{
+left:16px;
+-moz-animation-delay:0.65s;
+-webkit-animation-delay:0.65s;
+-ms-animation-delay:0.65s;
+-o-animation-delay:0.65s;
+animation-delay:0.65s;
+}
+
+#ballsWaveG_3{
+left:32px;
+-moz-animation-delay:0.78s;
+-webkit-animation-delay:0.78s;
+-ms-animation-delay:0.78s;
+-o-animation-delay:0.78s;
+animation-delay:0.78s;
+}
+
+#ballsWaveG_4{
+left:48px;
+-moz-animation-delay:0.91s;
+-webkit-animation-delay:0.91s;
+-ms-animation-delay:0.91s;
+-o-animation-delay:0.91s;
+animation-delay:0.91s;
+}
+
+#ballsWaveG_5{
+left:64px;
+-moz-animation-delay:1.04s;
+-webkit-animation-delay:1.04s;
+-ms-animation-delay:1.04s;
+-o-animation-delay:1.04s;
+animation-delay:1.04s;
+}
+
+#ballsWaveG_6{
+left:80px;
+-moz-animation-delay:1.17s;
+-webkit-animation-delay:1.17s;
+-ms-animation-delay:1.17s;
+-o-animation-delay:1.17s;
+animation-delay:1.17s;
+}
+
+#ballsWaveG_7{
+left:96px;
+-moz-animation-delay:1.3s;
+-webkit-animation-delay:1.3s;
+-ms-animation-delay:1.3s;
+-o-animation-delay:1.3s;
+animation-delay:1.3s;
+}
+
+#ballsWaveG_8{
+left:112px;
+-moz-animation-delay:1.43s;
+-webkit-animation-delay:1.43s;
+-ms-animation-delay:1.43s;
+-o-animation-delay:1.43s;
+animation-delay:1.43s;
+}
+
+@-moz-keyframes ballsWaveG{
+0%{
+background-color:#000000;
+}
+
+100%{
+background-color:#FFFFFF;
+}
+
+}
+
+@-webkit-keyframes ballsWaveG{
+0%{
+background-color:#000000;
+}
+
+100%{
+background-color:#FFFFFF;
+}
+
+}
+
+@-ms-keyframes ballsWaveG{
+0%{
+background-color:#000000;
+}
+
+100%{
+background-color:#FFFFFF;
+}
+
+}
+
+@-o-keyframes ballsWaveG{
+0%{
+background-color:#000000;
+}
+
+100%{
+background-color:#FFFFFF;
+}
+
+}
+
+@keyframes ballsWaveG{
+0%{
+background-color:#000000;
+}
+
+100%{
+background-color:#FFFFFF;
+}
+
+}
+
+</style>
+    <div id="ballsWaveG">
+        <div id="ballsWaveG_1" class="ballsWaveG">
+        </div>
+        <div id="ballsWaveG_2" class="ballsWaveG">
+        </div>
+        <div id="ballsWaveG_3" class="ballsWaveG">
+        </div>
+        <div id="ballsWaveG_4" class="ballsWaveG">
+        </div>
+        <div id="ballsWaveG_5" class="ballsWaveG">
+        </div>
+        <div id="ballsWaveG_6" class="ballsWaveG">
+        </div>
+        <div id="ballsWaveG_7" class="ballsWaveG">
+        </div>
+        <div id="ballsWaveG_8" class="ballsWaveG">
+        </div>
+    </div>
+</div>
+</body>
+</html>

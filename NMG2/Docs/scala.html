@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<div class="multicol">
+    <h2>Scala files</h2>
+    <p>From the <a href="http://www.huygens-fokker.org/scala/">Scala home page</a>...</p>
+    <blockquote>Scala is a powerful software tool for experimentation with musical tunings, such as just intonation scales, equal and historical temperaments, microtonal and macrotonal scales, and non-Western scales.</blockquote>
+    <p>The scala application can retune midi instruments using pitch bender messages but for the G2, this will only work with monophonic patches.</p>
+    <p>While the G2 has no native support for scala files, a patch has been produced that allows for arbitrary returning of up to 96 notes within a polyphonic patch.
+        The scala utility in this app can read scl files and directly adjust settings in the G2 scala patch template.
+    </p>
+	<p>The scl file contains definitions for alternate tuning. For example</p>
+    <pre>
+! meanquar.scl
+!
+1/4-comma meantone scale. Pietro Aaron's temperament (1523)
+ 12
+!
+ 76.04900
+ 193.15686
+ 310.26471
+ 5/4
+ 503.42157
+ 579.47057
+ 696.57843
+ 25/16
+ 889.73529
+ 1006.84314
+ 1082.89214
+ 2/1    </pre>
+	<p>This app is intended as a replacement for the bare bones python version and will allow selecting up to eight scala files per patch.</p>
+	
+	<p>Kbm (keyboard mapping) files are also supported, each scl file can have a kbm file associated with it. The app allows for the root key
+         to be changed from the default Middle C, or the map file override. The selected note becomes the new root note (no tuning applied) while the octave is
+        combined with any retuning specified in the map file.</p>
+	
+	</div>
+</body>
+</html>

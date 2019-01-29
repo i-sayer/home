@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<div class="multicol">
+    <h2>The following files will invoke the sample creation mode.</h2>
+        <ol>
+            <li>wav/aif/aiff - 8 or 16 bit PCM, multi channel ok but only the first channel is used.</li>
+            <li>bin - 8 bit linear or a-law companded*</li>
+        </ol>
+    <p>*because these ROM image files have no header, there is no way to determine if the data is compressed or not, the system assumes all such files to be a-law compressed unless the file name contains the digits &#39;27&#39;. This was simply expedient due to the nature of the files I had at hand, the uncompressed ones tended to have the ROM code included in the file name (ie. Linn Kick 2716.bin).</p>
+    <p>All data is normalized for display and by default a 1/2 sample rate copy is selected. The trim slider allows skipping the first (up to) 256 samples. The ratio buttons allow you to select other ratios of decimation.</p>
+
+    <p>You can select up to 8 files, each will have it&#39;s own variation in the final patch.</p>
+
+    <p>Press the Get PCH2 button to create the patch file which you can then download. The patch file will contain information from the file table in it&#39;s textpad.</p>
+</div>
+</body>
+</html>

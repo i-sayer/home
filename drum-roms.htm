@@ -1,0 +1,331 @@
+﻿<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+    <script src="script/_z_.js"></script>
+    <script src="script/JSUnzip.js"></script>
+    <script src="script/rawinflate.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400' rel='stylesheet' type='text/css'>
+    <style type="text/css">
+        body {
+            font-family: "Open Sans", sans-serif;
+            box-sizing: border-box;
+            font-size: 16.5px;
+            letter-spacing: 1px;
+            padding:0;
+            margin:0;
+            background-color: hsl(180, 20%, 90%);
+        }
+		#MachineList {
+			display: flex;
+			flex-flow: column;
+		}
+        .machine {
+            border: 1px solid gray;
+            flex: 1 2 auto;
+            vertical-align: top;
+            margin:0 6px;
+            box-shadow: -2px 0 6px silver, 2px 0 6px silver;
+            max-height: 30px;
+            overflow: hidden;
+            transition: max-height 0.23s ease;
+            position: relative;
+        }
+		@media (min-width: 960px) {
+			#MachineList {
+				flex-flow: row wrap;
+				justify-content: space-evenly;
+			}
+			.machine {
+				flex: 1 2 180px;
+			}
+		}
+        a {
+            color: silver;
+        }
+        .machine h3::after {
+            content: '\25bc';
+            position: absolute;
+            right:0;
+            top:4px;
+        }
+        .machine.opened h3::after {
+            content: '\25b2';
+        }
+            .machine.opened {
+                max-height: 800px;
+            }
+            .machine h3 {
+                color: white;
+                background-color: #62676c;
+                padding: 4px;
+                margin:0;
+                cursor: pointer;
+            }
+        p {
+            margin-top: 0;
+        }
+        div.header {
+            background-color: #62676c ;
+            color: #222;
+            min-height: 135px;
+            box-shadow:0 3px 9px black;
+        }
+        div.header img, div.header h1 {
+            float: right;
+            margin-left:2em;
+            text-shadow: -1px -1px 3px #aaa;
+        }
+        div.machine label {
+            display:block;
+            padding:4px;
+        }
+        label.hz::after {
+            content:attr(data-hz);
+            margin-left:1em;
+        }
+		#AllRoms {
+			display: flex;
+			flex-flow: row wrap;
+			justify-content: space-evenly;
+		}
+		.rom {
+			flex: 0 1 125px;
+			border: 1px solid silver;
+			display: none;
+			flex-direction: column;
+			margin: 4px;
+			padding: 12px;
+			border-radius: 8px;
+			position: relative;
+			box-shadow: 0 3px 5px -2px rgba(0,0,0,0.5);
+			user-select:none;
+			background: radial-gradient(circle, rgab(0,0,0,0.1) 16px, transparent 16px, transparent);
+		}
+		.rom::after {
+			content: "";
+			position: absolute;
+			background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="#777" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/><path d="M0 0h24v24H0z" fill="none"/></svg>') no-repeat;
+			height: 24px;
+			width: 24px;
+			bottom:0;
+			right:0;
+		}
+		.rom h4 {
+			margin: 0;
+		}
+    </style>
+</head>
+<body>
+	<div class="header">
+	<img height="135" src="_images/EPROMS.png" />
+    <h1>Drum EPROM collection</h1>
+        <audio id="playa" controls></audio>
+        <a id="downloadlink">wav link</a>
+        <a id="downloadlink2">bin link</a>
+        <a id="downloadlink3">alternate link</a>
+        <p><br /><br />These ROM images are from some classic digital Drum Machines/Kits of the 1980's. Read about it at my <a href="http://drumrompage.blogspot.co.nz/" target="_blank">Blog</a></p>
+	</div>
+	<div id="forIncompat">
+		<p>If you are reading this then you have:<ul><li>Disabled Javascript</li><li>Not upgraded your browser in quite a few years</li></ul></p>
+		<p>This app requires a browser that supports template strings and fat arrows. Chrome and Firefox are great.</p>
+		<p>You may be interested in these useful links. <a href="#">Great deals on fax paper</a>, <a href="#">How to customize your MySpace page</a>
+	</div>
+    <section class="wrapper">
+		<section id="MachineList"></section>
+		<section id="AllRoms"></section>
+    </section>
+	<script>
+		forIncompat.innerHTML = "";
+	    document.title = document.location.pathname.split(['/']).slice(-1)[0].slice(0, -4);// change back to -5 for html
+        // get the zip file that matches the html file name
+	    var xhr = new XMLHttpRequest();
+	    xhr.open("GET", document.title + ".zip");
+	    xhr.onload = function (e)
+	    {
+	        var data = new Uint8Array(xhr.response);
+	        var unzipper = new JSUnzip(data);
+	        if (unzipper.isZipFile)
+	        {
+	            unzipper.readEntries();
+	            var machines = [], roms = [];
+	            unzipper.entries.sort(function (a, b) { return (a.fileName == b.fileName)?0:(a.fileName>b.fileName)?1:-1});
+	            unzipper.entries.forEach(function (f,uzindex)
+	            {
+	                //console.log(f.fileName + ":" + f.compressionMethod);
+	                var pe = f.fileName.split('/');
+	                if (f.compressedSize == 0)
+	                {
+	                    pe.push({ type: "range", min: "22050", max: "44100", step: "3675" });
+	                    pe.push({ "data-hz": "33.075kHz" });
+	                    machines.push(_z.dom("div.machine#" + pe[1] + ">h3;1+label.hz;4^Sample Rate>input;3", pe)) - 1;
+	                }
+	                else
+	                {
+	                    pe.push({ "data-uzindex": uzindex });
+	                    pe.push(f.uncompressedSize / 1024 + "K");
+						pe.push(pe[2].slice(0,-4));
+	                    var r = _z.dom("div.rom;3>h4;5+span;4", pe);
+	                    //machines[machines.length - 1].appendChild(r);
+	                    r.setAttribute("data-pid", machines[machines.length - 1].id);
+	                    r.addEventListener( "click", clickrom, false);
+						AllRoms.appendChild(r);
+	                }
+	            });
+				var o = {}, mlen = machines.length, dib = 360/mlen;
+				var hues = Array.from({length:mlen},(x,i)=>`hsla(${(dib>>1)+i*dib},70%,70%,0.75)`);
+	            machines.forEach(function (m,mix)
+	            {
+	                m.firstChild.onclick = clickMachine;
+	                MachineList.appendChild(m);
+	                m.querySelector("input[type=range]").oninput = rateChange;
+					var selector_rule = `#MachineList.${m.id} + #AllRoms > .rom[data-pid="${m.id}"]`;
+					o[selector_rule] = {display:"flex"};
+					selector_rule = `.rom[data-pid="${m.id}"], #${m.id}`;
+					o[selector_rule] = {"background-color":hues[mix]};
+	            });
+				_z.json2css(o);
+	            machines[0].classList.add("opened");
+				MachineList.classList.add(machines[0].id);
+	        }
+	        function rateChange(e)
+	        {
+	            e.currentTarget.parentElement.setAttribute("data-hz", (e.currentTarget.value / 1000) + "kHz");
+	        }
+	        function clickMachine(e)
+	        {
+	            (this.parentElement.classList.toggle("opened"))?
+					this.parentElement.parentElement.classList.add(this.parentElement.id):
+					this.parentElement.parentElement.classList.remove(this.parentElement.id);
+	        }
+	        function clickrom(e)
+	        {
+                var index = this.getAttribute("data-uzindex");
+                var entry = unzipper.entries[index];
+                var inflatedData = entry.data;
+                if (entry.compressionMethod == 8)
+                    inflatedData = RawDeflate.inflate(entry.data);
+                // get datattype
+				var mid = this.getAttribute("data-pid");
+                var alaw = mid.slice(-4) === 'alaw';
+                var sampleRate = document.querySelector(`#${mid} input[type=range]`).value;
+                ////var wblob = makeWaveBlob(inflatedData, entry.compressedSize, alaw);
+                var blobby = makeWaveBlob(inflatedData, entry.uncompressedSize, alaw, sampleRate);
+                var wblob = blobby.wav;
+                var url = URL.createObjectURL(wblob);
+                playa.src = url;
+                var filename = entry.fileName.split('/').slice(-1)[0];
+                downloadlink.download = filename.slice(0, -4) + ".wav";
+                downloadlink2.download = filename;
+                downloadlink2.textContent = filename;
+                downloadlink3.download = "alt-"+filename;
+                downloadlink3.textContent = "alt-" + filename;
+                downloadlink.href = url;
+                var rombuffer = new ArrayBuffer(inflatedData.length);
+                var romview = new Uint8Array(rombuffer);
+                for (var i = 0; i < inflatedData.length; i++)
+                    romview[i] = inflatedData.charCodeAt(i);
+                var binblob = new Blob([romview], { type: 'application/octet-stream' });
+                downloadlink2.href = URL.createObjectURL(binblob);
+                downloadlink3.href = URL.createObjectURL(blobby.alt);
+                playa.play();
+	        }
+	    };
+	    xhr.responseType = "arraybuffer";
+	    xhr.send();
+
+	    function makeWaveBlob(data, len, alaw, sampleRate)
+	    {
+	        // make a 16 bit mono wav blob
+            
+	        //var sampleRate = 44100;
+	        var bytespersample = (alaw) ? 2 : 1;
+	        var blockalign = bytespersample;
+	        var byterate = blockalign * sampleRate;
+	        var buffer = new ArrayBuffer(44 + (len * bytespersample));
+	        var view = new DataView(buffer);
+	        writeUTFBytes(view, 0, 'RIFF');
+	        view.setUint32(4, 44 + len*bytespersample, true);
+	        writeUTFBytes(view, 8, 'WAVE');
+	        // FMT sub-chunk
+	        writeUTFBytes(view, 12, 'fmt ');
+	        view.setUint32(16, 16, true);
+	        view.setUint16(20, 1, true);
+	        // mono (1 channel)
+	        view.setUint16(22, 1, true);
+	        view.setUint32(24, sampleRate, true);
+	        view.setUint32(28, byterate, true);// bytes rate, sample rate * channels*bytes per sample
+	        view.setUint16(32, blockalign, true); //block align bytes per sample * channels
+	        view.setUint16(34, bytespersample*8, true);// bits per sample
+	        // data sub-chunk
+	        writeUTFBytes(view, 36, 'data');
+	        view.setUint32(40, len * bytespersample, true);
+
+	        // buffer for opposite format 8 bit rom image
+	        var altbuffer = new ArrayBuffer(len);
+	        var altview = new DataView(altbuffer);
+
+	        // write the PCM samples
+	        var index = 44;
+	        var volume = 1;
+	        var ebit, fbit;
+	        if (alaw) {
+	            for (var i = 0; i < len; i++) {
+	                ebit = data.charCodeAt(i);
+	                fbit = alawExpand(ebit);
+	                view.setInt16(index + (i << 1), fbit, true);
+	                altview.setUint8(i, 128+(fbit >> 8));
+	            }
+	        } else {
+	            for (var i = 0; i < len; i++) {
+	                ebit = data.charCodeAt(i);
+	                fbit = alawCompress((ebit-128)<<6);
+	                view.setUint8(index + i, ebit);
+	                altview.setUint8(i, fbit);
+                }
+	        }
+
+	        var blob = new Blob([view], { type: 'audio/wav' });
+	        var altblob = new Blob([altview], { type: 'application/octet-stream' });
+	        return { wav: blob, alt: altblob };
+        }
+
+	    function writeUTFBytes(view, offset, string)
+	    {
+	        var lng = string.length;
+	        for (var i = 0; i < lng; i++)
+	        {
+	            view.setUint8(offset + i, string.charCodeAt(i));
+	        }
+	    }
+
+	    function alawExpand(b8) {
+	        var exp = ((b8 & 0x70) >> 4) + 1;
+	        var man = (b8 & 0x0F) | 0x10;
+	        var b14 = (man << exp);
+	        if (b8 > 127)
+	            b14 = 0 - b14;
+	        return b14*4;
+	    }
+	    function alawCompress(b14) {
+	        var leadingZerosTable = [
+                7, 6, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3,
+                2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	        ];
+	        var abs = Math.floor(Math.min(8193, Math.abs(b14)));
+	        var lz = leadingZerosTable[((abs & 0x1FC0) >> 6)];
+	        var man = ((abs >> (8 - lz)) & 0xF);
+	        var b8 = ((b14 < 0) ? 0x80 : 0) | ((7 - lz) << 4) | man;
+	        return b8;
+	    }
+
+	</script>
+</body>
+</html>

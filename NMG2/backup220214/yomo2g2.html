@@ -1,0 +1,538 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Nord Modular G2 pch2 utilityies</title>
+    <script type="text/javascript" src="moduleDic.js"></script>
+    <script type="text/javascript" src="NordPch2.js"></script>
+    <script type="text/javascript" src="zenDom.js"></script>
+    <style type="text/css">
+        @font-face {
+            font-family: Clave;
+            src: url('Clave2.ttf') format('truetype');
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            color:#DDD;
+            background-color:#A02020;
+            margin:10px 6em;
+        }
+        .logo {
+            font: 900 60px Clave;
+        }
+        input[type='range'] {
+            margin:0;
+            border-right:1px solid white;
+        }
+        .right {
+            position:absolute;
+            right:0;
+            bottom:4px;
+        }
+        .bigText {
+            font-size: x-large;
+        }
+        .heading {
+            height: 60px;
+            color: #28041d;
+            position:relative;
+        }
+        .underline {
+            border-bottom:2px solid #28041d;
+        }
+        .center {
+            text-align:center;
+        }
+        table {
+            border-collapse: collapse;
+            display:inline-block;
+        }
+        td {
+            text-align: right;
+        }
+        td, th {
+            border:1px solid #28041d;
+            padding:1px 6px;
+        }
+        td:first-child {
+            text-align: left;
+        }
+        .toptrm, .bottrm {
+            position: absolute;
+            left: 0;
+            top:44px;
+            height: 256px;
+            border-left: 1px dotted silver;
+        }
+        .bottrm {
+            top:302px;
+        }
+        .rule {
+            width: 512px;
+            height: 22px;
+            border-right: 1px solid;
+            text-align:center;
+            display:inline-block;
+            position:relative;
+        }
+            .rule span {
+                background-color: #A02020;
+                padding: 0 6px;
+            }
+            .rule span::before {
+                content:"";
+                width:512px;
+                border-top:1px solid;
+                height:10px;
+                position:absolute;
+                top:12px;
+                left:0;
+                z-index:-1;
+            }
+            .rule:first-child {
+                border-left: 1px solid;
+            }
+            .rule::before {
+                content: "<";
+                position: absolute;
+                left:-2px;
+            }
+            .rule::after {
+                content: ">";
+                position: absolute;
+                right:-2px;
+            }
+        #controls {
+            display: none;
+            width: 100px;
+            text-align:center;
+        }
+        a {
+                color: white;
+                text-decoration: none;
+        }
+            #controls a {
+                display: none;
+            }
+    </style>
+</head>
+<body>
+    <div class="heading underline"><span class="logo">G2</span><span class="right bigText">Multi-file to pch2 patch file utility</span></div>
+    <p class="center"><input type="file" onchange="kickoff(this)" />We accept 8bit_Rom<b>.bin</b>, pcmaudio<b>.wav</b>(or .aif)., <a href="Docs/Self.html">selfSettingPatch<b>.pch2</b></a> coming soon: scalaTuning<b>.scl</b> and midi<b>.mid</b>.</p>
+    <p class="underline"></p>
+    <div id="controls"><button id="GoButton">Get PCH2</button><a id="DownloadLink" href="#">Download</a></div>
+    <script type="text/javascript">
+        var ftypes = {
+            txt: { proc: proctext, readas: 'readAsText' },
+            bin: { proc: procbin, readas: 'readAsArrayBuffer' },
+            wav: { proc: procwav, readas: 'readAsArrayBuffer' },
+            aif: { proc: procwav, readas: 'readAsArrayBuffer' },
+            aiff: { proc: procwav, readas: 'readAsArrayBuffer' },
+            pch2: { proc: procpch2, readas: 'readAsArrayBuffer' }
+        };
+        /*
+        var nav = ZenDom.parse(0, "span>button{Make Now}+br+a#download[href='#']{download}");
+        nav.firstChild.onclick = function () { makeAudioPch2(); };//makeAudioPch2;
+        */
+        function kickoff(obj) {
+            if (obj.files[0]) {
+                for (var i = 0; i < Math.min(8, obj.files.length); i++) {
+                    // get extension
+                    var fnm = obj.files[i].name;
+                    var ext = fnm.split('.').pop();
+                    ext = (ext == fnm) ? null : ext.toLowerCase();
+                    if (ext in ftypes) {
+                        var reader = new FileReader();
+                        reader.originalName = fnm;
+                        reader.onload = ftypes[ext].proc;
+                        reader[ftypes[ext].readas](obj.files[i]);
+                    } else
+                        alert("I don't know how to process " + ext);
+                }
+            }
+        }
+        // handy non-critical error function
+        function warning(msg) {
+            alert(msg);
+            return null;
+        }
+        // some dom structures for use in one or more processors
+        structure = {
+            audioTable: {
+                def: "table#audioTable>tr>th{var}+th{source file}+th{samp}+th{type}+th{offset}+th{span}++tr*8>th+td*5", template: "samp01.pch2"
+            },
+            midiTable: { def: "table#audioTable>tr>th{track}>th{name}>th{notes}>th{Enable}++tr>td*4", template: "seqtemplate.pch2" }
+        }
+         // ------------------------
+        // start of file processors
+        // ------------------------
+        function procpch2(e, filename) {
+            var pch2 = new pch2_(e.target.result, filename);
+            var text = pch2.getTextPad();
+            if (text) {
+                if (text.substr(0,4) == "//yo")
+                    if (confirm("This pch2 file contains some code, shall I run it?")) {
+                        eval(text);
+                        // update patch in memory
+                        var lnk = document.getElementById("DownloadLink");
+                        pch2.writeParameters(1);
+                        lnk.href = pch2.getUrl();
+                        lnk.download = "samples.pch2";
+                        lnk.style.display = 'inline';
+                        document.getElementById("controls").style.display = "inline-block";
+                        document.getElementById("GoButton").style.display = "none";
+                    }
+            }
+        }
+        function proctext(e, filename) {
+            // can be used for any text based file i.e. scala
+            var text = e.target.result;
+            var lines = text.split(/[\r\n]+/g);
+            alert(lines[0]);
+        }
+        function getStructure(name, f) {
+            var s = document.getElementById(name);
+            if (s == null) {
+                s = ZenDom.parse(0, structure[name].def);
+                if (f)
+                    s.onclick = f;
+            }
+            return s;
+        }
+        function procwav(e) {
+            var audioTable = getStructure("audioTable", audioTableClick);
+            var rowarray = Array.prototype.slice.call(audioTable.rows);
+            var rows = (rowarray.filter(function (i) { return i.cells[0].innerHTML == ""; }));
+            if (rows.length == 0)
+                return warning("Table is all full!");
+            var cells = rows[0].cells;
+            Wav = new _wav(e.target.result, e.target.originalName);
+            cells[0].innerHTML = 9 - rows.length;
+            cells[1].innerHTML = Wav.filename;
+            cells[2].innerHTML = Wav.sampleRate;
+            cells[3].innerHTML = ((Wav.channels == 1) ? "mono:" : "stereo:") + Wav.bitDepth + "bit";
+            cells[4].innerHTML = "0";
+            cells[5].innerHTML = "1";
+            document.getElementById("controls").style.display = "inline-block";
+            document.getElementById("GoButton").addEventListener("click", makeAudioPch2, true);
+            rows[0].Wav = Wav;
+            Wav.rom.parentRow = rows[0];
+            Wav.rom.drawWave();
+            Wav.rom.decimate(2);
+        }
+        function procbin(e) {
+            var audioTable = getStructure("audioTable", audioTableClick);
+            var rowarray = Array.prototype.slice.call(audioTable.rows);
+            var rows = (rowarray.filter(function (i) { return i.cells[0].innerHTML == ""; }));
+            if (rows.length == 0) {
+                makeAudioPch2();
+                return warning("Table is all full!");
+            }
+            var cells = rows[0].cells;
+            Rom = new _rom(e.target.result, e.target.originalName);
+            cells[0].innerHTML = 9 - rows.length;
+            cells[1].innerHTML = Rom.filename;
+            cells[2].innerHTML = "~22000";
+            if (Rom.alaw)
+                cells[3].innerHTML = "mono:8bit,a-law";
+            else
+                cells[3].innerHTML = "mono:8bit";
+            cells[4].innerHTML = "0";
+            cells[5].innerHTML = "1";
+            document.getElementById("controls").style.display = "inline-block";
+            document.getElementById("GoButton").addEventListener("click", makeAudioPch2, true);
+            rows[0].Rom = Rom;
+            Rom.parentRow = rows[0];
+            Rom.drawWave();
+            Rom.decimate(2);
+        }
+         //
+        // javascript function objects 
+       //
+        function _wav(data, filename) {
+            this.data = data;
+            this.filename = filename;
+            var dataview = new DataView(this.data);
+            var ofs = 8;
+            var hdr = dataview.getInt32(0);
+            if (hdr == 0x52494646/*RIFF*/)
+                this.bigEndian = true;
+            else if (hdr == 0x52494658/*RIFX*/)
+                this.bigEndian = false;
+            else if (hdr == 0x464f524d/*FORM*/)
+                this.bigEndian = false;
+            else
+                return warning("Not RIF[F|X] or FORM");
+
+            // walk the chunks (I always wanted to say that)
+            var chunksize;
+            do {
+                hdr = dataview.getInt32(ofs);
+                chunksize = dataview.getInt32(ofs + 4, this.bigEndian) + 8;
+                if (hdr == 0x57415645 /*WAVE*/) {
+                    hdr = dataview.getInt32(ofs + 4);
+                    if (hdr == 0x666d7420/*fmt */) {
+                        chunksize = dataview.getInt32(ofs + 8, this.bigEndian) + 12;
+                        this.audioFormat = dataview.getInt16(ofs + 12, this.bigEndian);
+                        this.channels = dataview.getInt16(ofs + 14, this.bigEndian);
+                        this.bitDepth = dataview.getInt16(ofs + 26, this.bigEndian);
+                        this.sampleRate = dataview.getInt32(ofs + 16, this.bigEndian);
+                    }
+                }
+                else if (hdr == 0x41494646 /*AIFF*/) {
+                    hdr = dataview.getInt32(ofs + 4);
+                    if (hdr == 0x434f4d4d/*COMM*/) {
+                        chunksize = dataview.getInt32(ofs + 8, this.bigEndian) + 12;
+                        this.channels = dataview.getInt16(ofs + 12, this.bigEndian);
+                        // dont care this.frames = dataview.getInt32(ofs + 14, this.bigEndian);
+                        // bastards!!! sample rate stored as 80bit float
+                        var mantissa = dataview.getUint16(ofs + 22, this.bigEndian) +
+                            dataview.getUint16(ofs + 24, this.bigEndian) * 65536;
+                        // need to check if the above works with rates > 48K
+                        this.sampleRate = mantissa;
+                        this.bitDepth = dataview.getInt16(ofs + 18, this.bigEndian);
+                    }
+                }
+                else if (hdr == 0x64617461 /*data*/) {
+                    this.dataOffset = ofs + 8;
+                    break; // remove if we want to check all chunks
+                }
+                else if (hdr == 0x53534e44 /*SSND*/) {
+                    this.dataOffset = ofs + 16;
+                    break; // remove if we want to check all chunks
+                }
+                ofs += chunksize;
+            } while (ofs < this.data.byteLength);
+            if (!this.dataOffset)
+                return warning('Error reading header, no data offset found');
+            this.rom = new _rom(this, this.filename);
+            return this;
+        }
+        // the _wav object depends on _rom for display, decimation and compression
+        function _rom(data, filename) {
+            // ROM image file contains a-law compressed 8 bit data
+            if (data.toString() == "[object ArrayBuffer]") {
+                this.data = data;
+                this.filename = filename;
+                this.alaw = true; // be nice to automatically check
+                if (filename.indexOf("27")>0)
+                    this.alaw = false;
+            } else {
+                // assume called with initialised _wav object
+                this.filename = data.filename;
+                if (data.bitDepth == 8)
+                    var w = new Int8Array(data.data, data.dataOffset, Math.min(8192, (data.data.byteLength-data.dataOffset))); // ref to the original wave data
+                else
+                    var w = new Int16Array(data.data, data.dataOffset, Math.min(8192, (data.data.byteLength - data.dataOffset) / 2)); // ref to the original wave data
+                var wa = Array.apply([], w);
+                if (data.channels > 1)
+                    wa = wa.filter(function (v, i) { return i % 2 });
+                if (data.bitDepth == 8)
+                    wa = wa.map(function (v) { return v * 256; });
+                else {
+                    if (!data.bigEndian) { // need to swap bytes
+                        var dv = new DataView(data.data, data.dataOffset);
+                        for (var i = 0; i < wa.length; i++) {
+                            var ne = dv.getInt16(i*2, false);
+                            wa[i] = ne;
+                        }
+                    }
+                }
+                //this.data = new Uint8Array(wa.map(this.alawCompress));
+                this.wdata = wa;
+            }
+            this.windowSize = 4096;
+            this.scale = 1;
+
+            this.drawWave = function () {
+                if (!this.wdata)
+                    var dataarray = new Uint8Array(this.data);
+                //if (!sc)
+                //    sc = ZenDom.parse(0, "div#scratch");
+                //var node;
+                //while (node = sc.firstChild)
+                //    sc.removeChild(node);
+                var parentRow = this.parentRow;
+                var canvas = document.getElementById('wave_canvas');
+                if (!canvas)
+                    var canvas = ZenDom.parse(0, "div[style='position:relative']>input[type='range' max='512' style='width:512px']+div.toptrm+div.bottrm++" +
+                        "div.rule>span{2 var}++div.rule>span{1 var}++" +
+                        "button.dec{1:1}++button.dec{2:1}++button.dec{3:1}++button.dec{4:1}++button.dec{5:1}++button.dec{6:1}" +
+                        "++canvas#wave_canvas[width='" + this.windowSize + "' height='512']").lastChild;
+                var slider = canvas.parentElement.firstChild;
+                var tdiv = slider.nextSibling;
+                var bdiv = tdiv.nextSibling;
+                var rrr = this.ratio;
+                function setTrim() {
+                    var pos = slider.value;
+                    parentRow.cells[4].innerHTML = pos;
+                    tdiv.style.left = pos + "px";
+                    if (rrr)
+                        bdiv.style.left = (pos / rrr) + "px";
+                }
+                slider.onchange = setTrim;
+                slider.value = parentRow.cells[4].innerHTML;
+                setTrim();
+                var decibutt = canvas.parentElement.querySelectorAll('button.dec');
+                for (var i = 0; i < decibutt.length; i++)
+                    decibutt[i].onclick = this.decimate.bind(this, i + 1);
+                var ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                var baseline = ctx.canvas.height / 4;
+                ctx.beginPath();
+                ctx.moveTo(0, baseline);
+                if (!this.wdata) {
+                    for (var x = 0; x < this.windowSize; x += this.scale) {
+                        var y = (this.alaw) ? this.alawExpand(dataarray[x * this.scale]) * 0.015625/* scale = 128/8192*/ : dataarray[x]-128;
+                        ctx.lineTo(x, baseline + y);
+                    }
+                } else {
+                    for (var x = 0; x < this.windowSize; x += this.scale) {
+                        var y = this.wdata[x * this.scale] * 0.00390625;// scale = 128/32768
+                        ctx.lineTo(x, baseline + y);
+                    }
+                }
+                if (this.downSampledData) {
+                    baseline *= 3;
+                    ctx.moveTo(0, baseline);
+                    for (var x = 0; x < this.windowSize; x += this.scale) {
+                        var y = this.alawExpand(this.downSampledData[x * this.scale]) * 0.015625;
+                        ctx.lineTo(x, baseline + y);
+                    }
+                }
+                ctx.stroke();
+            }
+            this.decimate = function (n) {
+                //var n = parseInt(e.target.getAttribute('data-val'));
+                this.ratio = n;
+                var gain = 1.0 / 1.960337404;
+                var xcoeffs = [-0.1200421755, -0.0000000000, +0.6002108774, +1.0000000000, +0.6002108774, -0.0000000000, -0.1200421755];
+                var ncoeff = xcoeffs.length;
+                var dsmp = [];
+                // get float version of data
+                if (!this.wdata) {
+                    var dataarray = new Uint8Array(this.data);
+                    var wfloat = [];
+                    for (var i = 0; i < dataarray.length; i++)
+                        wfloat.push((this.alaw)?this.alawExpand(dataarray[i]):(dataarray[i]-128)*64);
+                    var wfloata = new Float64Array(wfloat);
+                } else
+                    var wfloata = new Float64Array(this.wdata);
+                // apply filter and discard all but nth
+                for (var i = 0; i < wfloata.length; i += n) {
+                    if (n == 1) {
+                        dsmp.push(wfloata[i]);
+                        continue; // no filter, just float copy of sample data for compression
+                    }
+                    var tmp = wfloata.subarray(i, i + ncoeff);
+                    var sum = 0.0;
+                    for (var j = 0; j < ncoeff; j++) {
+                        sum += tmp[j] * xcoeffs[j];
+                    }
+                    dsmp.push(sum * gain);
+                }
+                // create alaw compressed version
+                if (this.wdata)
+                    dsmp = dsmp.map(function (i) { return i * 0.25 }); // scale to 14 bits
+                this.downSampledData = new Uint8Array(dsmp.map(this.alawCompress));
+                this.drawWave();
+            }
+            this.alawExpand = function (b8) {
+                var exp = ((b8 & 0x70) >> 4) + 1;
+                var man = (b8 & 0x0F) | 0x10;
+                var b14 = (man << exp);
+                if (b8 > 127)
+                    b14 = 0 - b14;
+                return b14;
+            }
+            this.alawCompress = function (b14) {
+                var leadingZerosTable = [ // need to check if declaration like this impacts performance
+                    7, 6, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3,
+                    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ];
+                var abs = Math.floor(Math.min(8193, Math.abs(b14)));
+                var lz = leadingZerosTable[((abs & 0x1FC0) >> 6)];
+                var man = ((abs >> (8 - lz)) & 0xF);
+                var b8 = ((b14 < 0) ? 0x80 : 0) | ((7 - lz) << 4) | man;
+                return b8;
+            }
+            if (!this.data)
+                this.data = new Uint8Array(wa.map(this.alawCompress));
+            return this;
+        }
+        function audioTableClick(e) {
+            var row = e.target.parentElement;
+            if (row.Wav)
+                row.Wav.rom.drawWave();
+            else if (row.Rom)
+                row.Rom.drawWave();
+        }
+        function makeAudioPch2() {
+            // get our template
+            var oReq = new XMLHttpRequest();
+            oReq.open("GET", "samp01.pch2", true);
+            oReq.responseType = "arraybuffer";
+            oReq.onload = function (oEvent) {
+                var arrayBuffer = oReq.response;
+                if (arrayBuffer)
+                    procpch2Audio(new pch2_(arrayBuffer, "samp01.pch2"));
+            }
+            oReq.send(null);
+        }
+        function setFilenameInTextpad(ar, rn, rows) {
+            var sstr = rows[rn].cells[1].innerHTML.split("");
+            var dstr = ar[rn].split("");
+            var ratio = '0';
+            if (rows[rn].Wav)
+                ratio = rows[rn].Wav.rom.ratio;
+            else
+                ratio = rows[rn].Rom.ratio;
+            dstr[3] = ratio;
+            for (var j = 7; j < ar[rn].length - 8; j++)
+                dstr[j] = (j < sstr.length + 9) ? sstr[j - 7] : ' ';
+            ar[rn] = dstr.join("");
+        }
+        function procpch2Audio(pch2) {
+            // get data from all variation roms and set levels
+            var seq = pch2.getModuleArray(1, "SeqLev");
+            var rows = document.getElementById("audioTable").rows;
+            var tpa = pch2.getTextPad().split("\r");
+            for (var r = 1; r < Math.max(8, rows.length) ; r++) {
+                var thisrom = null;
+                try {
+                    if (rows[r].Wav)
+                        thisrom = rows[r].Wav.rom;
+                    else if (rows[r].Rom)
+                        thisrom = rows[r].Rom;
+                    if (!thisrom)
+                        continue;
+                } catch (e) {
+                    break;
+                }
+                setFilenameInTextpad(tpa, r, rows);
+                var bin = new Uint8Array(thisrom.downSampledData);
+                var trimOffset = parseInt(rows[r].cells[4].innerHTML);
+                var varofs = seq[0].pcnt * (r-1);
+                for (var i = 0; i < seq.length * 16; i++) {
+                    var seqix = Math.floor(i / 16);
+                    var val = bin[i+trimOffset];
+                    seq[seqix].lv[i % 16 + varofs] = val & 0x7f;
+                    seq[seqix].lv[i % 16 + 16 + varofs] = (val & 0x80) ? 1 : 0;
+                }
+            }
+            pch2.setTextPad(tpa.join("\r"));
+            pch2.writeParameters(1);
+            var url = pch2.getUrl();
+            var lnk = document.getElementById("DownloadLink");
+            lnk.href = url;
+            lnk.download = "samples.pch2";
+            lnk.style.display = 'inline';
+        }
+    </script>
+</body>
+</html>
